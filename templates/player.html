@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <title>LectureLens Player</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #1a1a1a; 
+            color: white; 
+            font-family: "Google Sans", sans-serif;
+        }
+        .sidebar { background-color: #2d2d2d; height: 100vh; overflow-y: auto; }
+        
+        /* Custom Scrollbar for Sidebar */
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-track { background: #1a1a1a; }
+        .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        .nav-tabs .nav-link { color: #aaa; border: none; }
+        .nav-tabs .nav-link.active { 
+            background-color: transparent; 
+            color: #ffc107; /* สีเหลืองทอง */
+            border-bottom: 2px solid #ffc107;
+            font-weight: bold;
+        }
+        
+        .quiz-card {
+            background-color: #252525;
+            border: 1px solid #444;
+            transition: all 0.3s ease;
+        }
+        .quiz-card:hover {
+            border-color: #666;
+        }
+        
+        .option-btn {
+            transition: 0.2s;
+            text-align: left;
+            margin-bottom: 8px;
+            white-space: normal; /* ให้ข้อความยาวๆ ขึ้นบรรทัดใหม่ได้ */
+        }
+
+        .quiz-card .card-text {
+        color: #ffffff !important;
+        font-size: 15px
+        }
+
+        .quiz-question-text {
+            font-size: 1rem; /* ลดขนาดลง (เดิม fs-5 คือประมาณ 1.25rem) */
+            color: #ffffff;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-8 p-0 d-flex align-items-center justify-content-center bg-black" style="height: 100vh;">
+                <video id="mainVideo" controls style="width: 100%; max-height: 100vh;">
+                    <source src="{{ video_url }}" type="video/mp4">
+                    Browser ของคุณไม่รองรับวิดีโอ
+                </video>
+            </div>
+
+            <div class="col-md-4 sidebar p-4">
+                <h3 class="text-info mb-4">🧠 LectureLens Analysis</h3>
+                
+                <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#summary-tab">สรุปเนื้อหา</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#quiz-tab">แบบฝึกหัด 
+                            {% if data.quizzes %}<span class="badge bg-warning text-dark">{{ data.quizzes|length }}</span>{% endif %}
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    
+                    <div class="tab-pane fade show active" id="summary-tab">
+                        <div class="alert alert-dark border-secondary mb-4">
+                            <strong>👤 ผู้พูด:</strong> {{ data.speaker_info }}
+                        </div>
+
+                        <h5 class="text-warning mb-3">📌 ประเด็นสำคัญ (คลิกเวลาเพื่อดู):</h5>
+                        <div class="list-group list-group-flush bg-transparent mb-4">
+                            {% for point in data.summary_points %}
+                            <button class="list-group-item list-group-item-action bg-transparent text-white border-secondary ps-0 d-flex align-items-start" 
+                                    onclick="seekVideo('{{ point.time }}')">
+                                <span class="badge bg-primary me-3">{{ point.time }}</span>
+                                <span>{{ point.text }}</span>
+                            </button>
+                            {% endfor %}
+                        </div>
+
+                        <div class="bg-dark p-3 rounded border border-secondary">
+                            <small class="text-info text-uppercase fw-bold">💡 Key Takeaways</small>
+                            <p class="mb-0 mt-2 text-white-50">{{ data.key_takeaways }}</p>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="quiz-tab">
+                        {% if data.quizzes %}
+                            {% for quiz in data.quizzes %}
+                            <div class="card quiz-card mb-4" id="quiz-card-{{ quiz.id }}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="badge bg-secondary">ข้อที่ {{ loop.index }}</span>
+                                        <span class="badge bg-dark border border-secondary">{{ quiz.type }}</span>
+                                    </div>
+                                    
+                                    <p class="quiz-question-text">{{ quiz.question }}</p>
+                                    
+                                    <div class="d-grid gap-0">
+                                        {% for option in quiz.options %}
+                                        <button class="btn btn-outline-light option-btn" 
+                                                onclick="checkAnswer(this, '{{ quiz.id }}', {{ loop.index0 }}, {{ quiz.correct_answer_index }})">
+                                            {{ option }}
+                                        </button>
+                                        {% endfor %}
+                                    </div>
+
+                                    <div id="feedback-{{ quiz.id }}" class="mt-3 p-3 rounded" style="display:none; background: rgba(0,0,0,0.3);">
+                                        <div class="result-header fw-bold mb-1"></div>
+                                        <div class="small text-info">
+                                            💡 <span class="explanation-text">{{ quiz.explanation }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted mt-5">
+                                ❌ ไม่พบข้อมูลแบบฝึกหัด
+                            </div>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function checkAnswer(btn, quizId, selectedIndex, correctIndex) {
+            // 1. หา Element ต่างๆ ใน Card นั้นๆ
+            const card = document.getElementById(`quiz-card-${quizId}`);
+            const allBtns = card.querySelectorAll('.option-btn');
+            const feedbackBox = document.getElementById(`feedback-${quizId}`);
+            const header = feedbackBox.querySelector('.result-header');
+
+            // 2. ปิดการกดปุ่มซ้ำ (Disable all buttons in this card)
+            allBtns.forEach(b => b.disabled = true);
+
+            // 3. ตรวจคำตอบ (ใช้ Index เทียบกัน แม่นยำกว่า Text)
+            if (selectedIndex === correctIndex) {
+                // ตอบถูก
+                btn.classList.remove('btn-outline-light');
+                btn.classList.add('btn-success');
+                
+                header.innerHTML = "✅ ถูกต้อง! เก่งมาก";
+                header.className = "result-header fw-bold text-success mb-1";
+            } else {
+                // ตอบผิด
+                btn.classList.remove('btn-outline-light');
+                btn.classList.add('btn-danger'); // ปุ่มที่กดเป็นสีแดง
+                
+                // เฉลยปุ่มที่ถูกให้เป็นสีเขียว
+                if (allBtns[correctIndex]) {
+                    allBtns[correctIndex].classList.remove('btn-outline-light');
+                    allBtns[correctIndex].classList.add('btn-success');
+                }
+
+                header.innerHTML = "❌ ยังไม่ถูกครับ";
+                header.className = "result-header fw-bold text-danger mb-1";
+            }
+
+            // 4. แสดงส่วนเฉลย
+            feedbackBox.style.display = 'block';
+        }
+    </script>
+    <script>
+    function seekVideo(timeStr) {
+        const video = document.getElementById('mainVideo');
+        if (!video) return;
+
+        // แปลงรูปแบบ "นาที:วินาที" (เช่น 02:15) ให้เป็นวินาทีรวม (135)
+        const parts = timeStr.split(':');
+        let totalSeconds = 0;
+
+        if (parts.length === 2) {
+            // กรณีนาที:วินาที
+            totalSeconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        } else if (parts.length === 3) {
+            // กรณีชั่วโมง:นาที:วินาที
+            totalSeconds = (parseInt(parts[0]) * 3600) + (parseInt(parts[1]) * 60) + parseInt(parts[2]);
+        } else {
+            // กรณีเป็นวินาทีมาเลย
+            totalSeconds = parseInt(parts[0]);
+        }
+
+        // สั่งวิดีโอไปยังตำแหน่งเวลา และเริ่มเล่นทันที
+        video.currentTime = totalSeconds;
+        video.play();
+
+        // เลื่อนหน้าจอไปที่ส่วนวิดีโอ (เน้นประสบการณ์ผู้ใช้บนมือถือ)
+        video.scrollIntoView({ behavior: 'smooth' });
+    }
+</script>
+</body>
+</html>

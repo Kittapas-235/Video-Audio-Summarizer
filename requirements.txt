@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+jinja2
+python-multipart
+google-generativeai
+yt-dlp
+python-dotenv
+apscheduler

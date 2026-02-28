@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <title>LectureLens AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        #loadingOverlay {
+            display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
+            background:rgba(0,0,0,0.85); z-index:9999; text-align:center; padding-top:20vh;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div id="loadingOverlay">
+        <div class="spinner-border text-warning" style="width: 4rem; height: 4rem;" role="status"></div>
+        <h2 class="text-white mt-4">🧠 LectureLens AI กำลังประมวลผล...</h2>
+        <p class="text-muted">วิดีโอยาวอาจใช้เวลาสักครู่ กรุณาอย่าปิดหน้านี้</p>
+    </div>
+
+    <div class="container mt-5">
+        <div class="card shadow-lg border-0 mx-auto" style="max-width: 600px;">
+            <div class="card-header bg-primary text-white text-center py-4">
+                <h1><i class="fas fa-robot"></i> LectureLens AI</h1>
+                <p class="mb-0">พัฒนาโดย กฤตภาส เย็นใจ [cite: 6]</p>
+            </div>
+            <div class="card-body p-4">
+                
+                <form action="/process-file" method="post" enctype="multipart/form-data">
+                    <h5 class="text-muted mb-3"><i class="fas fa-file-video"></i> อัปโหลดไฟล์วิดีโอ</h5>
+                    <div class="input-group mb-3">
+                        <input type="file" name="file" class="form-control" accept="video/*" required>
+                        <button type="submit" class="btn btn-primary">วิเคราะห์ไฟล์</button>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="small text-muted">จำนวนข้อสอบ:</label>
+                            <select name="num_questions" class="form-select form-select-sm">
+                                <option value="3">3 ข้อ</option>
+                                <option value="5" selected>5 ข้อ</option>
+                                <option value="10">10 ข้อ</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted">ระดับความยาก:</label>
+                            <select name="difficulty" class="form-select form-select-sm">
+                                <option value="easy">ง่าย</option>
+                                <option value="medium" selected>ปานกลาง</option>
+                                <option value="hard">ยาก</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+
+                <hr class="my-4">
+
+                <form action="/process-url" method="post">
+                    <h5 class="text-muted mb-3"><i class="fab fa-youtube"></i> วางลิงก์ YouTube</h5>
+                    <div class="input-group mb-3">
+                        <input type="text" name="video_url" class="form-control" placeholder="https://www.youtube.com/watch?v=..." required>
+                        <button type="submit" class="btn btn-success">วิเคราะห์ลิงก์</button>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-6">
+                            <select name="num_questions" class="form-select form-select-sm">
+                                <option value="3">3 ข้อ</option>
+                                <option value="5" selected>5 ข้อ</option>
+                                <option value="10">10 ข้อ</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <select name="difficulty" class="form-select form-select-sm">
+                                <option value="easy">ง่าย</option>
+                                <option value="medium" selected>ปานกลาง</option>
+                                <option value="hard">ยาก</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function() {
+                document.getElementById('loadingOverlay').style.display = 'block';
+            });
+        });
+    </script>
+</body>
+</html>

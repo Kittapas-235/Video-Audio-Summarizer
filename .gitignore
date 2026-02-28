@@ -1,0 +1,20 @@
+# Environments
+venv/
+env/
+.venv/
+
+# Environment Variables (ความลับ)
+.env
+
+# Cache and temporary files
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Uploaded Files (ละเว้นไฟล์ข้างใน แต่ให้เก็บโฟลเดอร์ไว้)
+temp_uploads/*
+!temp_uploads/.keep
+
+# LTI Keys
+lti_config/*.key
+lti_config/private.key
