@@ -89,6 +89,7 @@ async def process_url(
     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
     ydl_opts = {
+        'format': '18/b[ext=mp4]/b/bestaudio[ext=m4a]/bestaudio',
         'outtmpl': file_path,
         'noplaylist': True,
         'cookiefile': 'cookies.txt',
