@@ -6,3 +6,4 @@ google-generativeai
 yt-dlp
 python-dotenv
 apscheduler
+imageio-ffmpeg

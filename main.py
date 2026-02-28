@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from services.ai_engine import summarize_video
 from apscheduler.schedulers.background import BackgroundScheduler
+import imageio_ffmpeg
 
 app = FastAPI()
 
@@ -84,11 +85,14 @@ async def process_url(
 ):
     filename = f"web_{uuid.uuid4().hex}.mp4"
     file_path = os.path.join(UPLOAD_DIR, filename)
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+
     ydl_opts = {
-        'format': '22/18/b[ext=mp4]/b/best',
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best', # โหลดภาพและเสียงที่ดีที่สุดมาประกอบร่างกัน
         'outtmpl': file_path,
         'noplaylist': True,
-        'cookiefile': 'cookies.txt'
+        'cookiefile': 'cookies.txt',
+        'ffmpeg_location': ffmpeg_path  # 👈 ชี้เป้าให้ yt-dlp เรียกใช้ ffmpeg ในการประกอบร่าง
     }
 
     try:
