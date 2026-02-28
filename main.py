@@ -84,7 +84,12 @@ async def process_url(
 ):
     filename = f"web_{uuid.uuid4().hex}.mp4"
     file_path = os.path.join(UPLOAD_DIR, filename)
-    ydl_opts = {'outtmpl': file_path, 'format': 'best[ext=mp4]'}
+    ydl_opts = {
+        'format': 'best[height<=1080][ext=mp4]/best[ext=mp4]/best', 
+        'outtmpl': file_path,
+        'noplaylist': True,
+        'cookiefile': 'cookies.txt'
+    }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
