@@ -85,7 +85,7 @@ async def process_url(
     filename = f"web_{uuid.uuid4().hex}.mp4"
     file_path = os.path.join(UPLOAD_DIR, filename)
     ydl_opts = {
-        'format': 'best',
+        'format': '22/18/b[ext=mp4]/b/best',
         'outtmpl': file_path,
         'noplaylist': True,
         'cookiefile': 'cookies.txt'
