@@ -5,7 +5,7 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # 🌟 ติดตั้ง ffmpeg ให้เครื่องเซิร์ฟเวอร์
-RUN apt-get update && apt-get install -y ffmpeg
+RUN apt-get update && apt-get install -y ffmpeg nodejs
 
 # ก๊อปปี้ requirements และติดตั้ง
 COPY requirements.txt .

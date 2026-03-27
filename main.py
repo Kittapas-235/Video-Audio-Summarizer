@@ -186,11 +186,20 @@ async def process_url(
         filename = f"web_{uuid.uuid4().hex}.m4a"
         file_path = os.path.join(UPLOAD_DIR, filename)
         
+        # ค้นหาไฟล์ cookies ทั้งในเครื่องเรา และใน Render Secret
+        cookie_path = "cookies.txt"
+        if os.path.exists("/etc/secrets/cookies.txt"):
+            cookie_path = "/etc/secrets/cookies.txt"
+
         ydl_opts = {
             'format': '140/bestaudio[ext=m4a]/best',
             'outtmpl': file_path,
             'noplaylist': True,
         }
+        
+        # ถ้าเจอไฟล์ cookies ให้ส่งไปหลอก YouTube ด้วย
+        if os.path.exists(cookie_path):
+            ydl_opts['cookiefile'] = cookie_path
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([video_url])
