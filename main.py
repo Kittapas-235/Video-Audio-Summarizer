@@ -198,12 +198,16 @@ async def process_url(
             shutil.copyfile(local_cookie, writable_cookie)
 
         ydl_opts = {
-            'format': '140/bestaudio[ext=m4a]/best',
+            'format': 'bestaudio/best', # ดึงไฟล์เสียงที่ดีที่สุด (ไม่ล็อกว่าต้องเป็น 140)
             'outtmpl': file_path,
             'noplaylist': True,
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'm4a', # บังคับแปลงเป็น m4a ด้วย ffmpeg
+            }],
         }
         
-        # ถ้ามีไฟล์คุกกี้ที่เขียนได้ ให้ใช้งานเลย
+        # ถ้าเจอไฟล์ cookies ให้ส่งไปหลอก YouTube ด้วย
         if os.path.exists(writable_cookie):
             ydl_opts['cookiefile'] = writable_cookie
 
