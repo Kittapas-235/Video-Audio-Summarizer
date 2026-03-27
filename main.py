@@ -54,7 +54,7 @@ scheduler = BackgroundScheduler()
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html", context={"request": request})
 
 # ==========================================
 # 🚀 ระบบ Streaming Video
@@ -115,7 +115,7 @@ async def process_file(
     try:
         # 1. เช็กประเภทไฟล์เบื้องต้น (Security)
         if not file.content_type.startswith("video/") and not file.content_type.startswith("audio/"):
-            return templates.TemplateResponse("index.html", {
+            return templates.TemplateResponse(request=request, name="index.html", context={
                 "request": request, "error_msg": "❌ Invalid file type. Only Audio or Video allowed."
             })
 
@@ -136,7 +136,7 @@ async def process_file(
                 if file_size > MAX_FILE_SIZE:
                     buffer.close()
                     os.remove(file_path) # ลบไฟล์ที่โหลดค้างไว้ทิ้งซะ
-                    return templates.TemplateResponse("index.html", {
+                    return templates.TemplateResponse(request=request, name="index.html", context={
                         "request": request, "error_msg": "❌ File is too large. Maximum size is 500MB."
                     })
                 
@@ -147,7 +147,7 @@ async def process_file(
 
         ai_data = summarize_video(file_path, num_questions, difficulty, include_written)
 
-        return templates.TemplateResponse("player.html", {
+        return templates.TemplateResponse(request=request, name="player.html", context={
             "request": request,
             "is_youtube": False,
             "is_audio": is_audio,
@@ -158,7 +158,7 @@ async def process_file(
         })
     except Exception as e:
         print(f"❌ Error in process-file: {e}")
-        return templates.TemplateResponse("index.html", {
+        return templates.TemplateResponse(request=request, name="index.html", context={
             "request": request,
             "error_msg": f"An error occurred while processing the file: {str(e)}"
         })
@@ -175,7 +175,7 @@ async def process_url(
     try:
         # 🛡️ เช็กความปลอดภัย: ต้องเป็น URL ของ YouTube เท่านั้น
         if not re.match(r"^(https?\:\/\/)?(www\.youtube\.com|youtu\.be)\/.+$", video_url):
-            return templates.TemplateResponse("index.html", {
+            return templates.TemplateResponse(request=request, name="index.html", context={
                 "request": request, 
                 "error_msg": "❌ Please provide a valid YouTube URL."
             })
@@ -197,7 +197,7 @@ async def process_url(
 
         ai_data = summarize_video(file_path, num_questions, difficulty, include_written)
 
-        return templates.TemplateResponse("player.html", {
+        return templates.TemplateResponse(request=request, name="player.html", context={
             "request": request, 
             "is_youtube": True,
             "youtube_id": youtube_id,
@@ -207,7 +207,7 @@ async def process_url(
         })
     except Exception as e:
         print(f"❌ Error in process-url: {e}")
-        return templates.TemplateResponse("index.html", {
+        return templates.TemplateResponse(request=request, name="index.html", context={
             "request": request, 
             "error_msg": "Cannot access this YouTube video. It might be private, deleted, or restricted."
         })
