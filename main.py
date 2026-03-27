@@ -186,10 +186,16 @@ async def process_url(
         filename = f"web_{uuid.uuid4().hex}.m4a"
         file_path = os.path.join(UPLOAD_DIR, filename)
         
-        # ค้นหาไฟล์ cookies ทั้งในเครื่องเรา และใน Render Secret
-        cookie_path = "cookies.txt"
-        if os.path.exists("/etc/secrets/cookies.txt"):
-            cookie_path = "/etc/secrets/cookies.txt"
+        # จัดการ Cookies หลบหลีกระบบ Read-Only ของ Render
+        secret_cookie = "/etc/secrets/cookies.txt"
+        local_cookie = "cookies.txt"
+        writable_cookie = os.path.join(UPLOAD_DIR, "working_cookies.txt")
+
+        # ก๊อปปี้ไฟล์ไปไว้ในที่ที่เขียนได้ (temp_uploads)
+        if os.path.exists(secret_cookie):
+            shutil.copyfile(secret_cookie, writable_cookie)
+        elif os.path.exists(local_cookie):
+            shutil.copyfile(local_cookie, writable_cookie)
 
         ydl_opts = {
             'format': '140/bestaudio[ext=m4a]/best',
@@ -197,9 +203,9 @@ async def process_url(
             'noplaylist': True,
         }
         
-        # ถ้าเจอไฟล์ cookies ให้ส่งไปหลอก YouTube ด้วย
-        if os.path.exists(cookie_path):
-            ydl_opts['cookiefile'] = cookie_path
+        # ถ้ามีไฟล์คุกกี้ที่เขียนได้ ให้ใช้งานเลย
+        if os.path.exists(writable_cookie):
+            ydl_opts['cookiefile'] = writable_cookie
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([video_url])
