@@ -1,219 +1,495 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <title>LectureLens Player</title>
+    <meta charset="UTF-8">
+    <title>LectureLens Player | VA-Summar</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
     <style>
-        body { 
-            background-color: #1a1a1a; 
-            color: white; 
-            font-family: "Google Sans", sans-serif;
-        }
+        body { background-color: #1a1a1a; color: white; font-family: "Google Sans", "Kanit", sans-serif; overflow: hidden; }
         .sidebar { background-color: #2d2d2d; height: 100vh; overflow-y: auto; }
-        
-        /* Custom Scrollbar for Sidebar */
         .sidebar::-webkit-scrollbar { width: 8px; }
         .sidebar::-webkit-scrollbar-track { background: #1a1a1a; }
         .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
-        .sidebar::-webkit-scrollbar-thumb:hover { background: #555; }
+        .nav-tabs .nav-link { color: #aaa; border: none; font-weight: 500; }
+        .nav-tabs .nav-link.active { background-color: transparent; color: #00d2ff; border-bottom: 2px solid #00d2ff; font-weight: bold; }
+        .flashcard-container { perspective: 1000px; cursor: pointer; height: 180px; margin-bottom: 20px; }
+        .flashcard-inner { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.6s; transform-style: preserve-3d; }
+        .flashcard-container.flipped .flashcard-inner { transform: rotateY(180deg); }
+        .flashcard-front, .flashcard-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; border-radius: 12px; padding: 20px; border: 1px solid #444; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .flashcard-front { background-color: #252525; color: #00d2ff; font-weight: bold; }
+        .flashcard-back { background-color: #1976d2; color: white; transform: rotateY(180deg); }
+        .quiz-card { background-color: #252525; border: 1px solid #444; transition: 0.3s; }
+        .option-btn { transition: 0.2s; text-align: left; margin-bottom: 8px; white-space: normal; }
+        .quiz-question-text { font-size: 1rem; color: #ffffff; font-weight: 600; margin-bottom: 15px; }
+        .btn-outline-light { border-color: #444; color: #aaa; font-size: 0.85rem; transition: 0.3s; }
+        .btn-outline-light:hover { background-color: #1976d2; border-color: #1976d2; color: white; }
 
-        .nav-tabs .nav-link { color: #aaa; border: none; }
-        .nav-tabs .nav-link.active { 
-            background-color: transparent; 
-            color: #ffc107; /* สีเหลืองทอง */
-            border-bottom: 2px solid #ffc107;
-            font-weight: bold;
-        }
-        
-        .quiz-card {
-            background-color: #252525;
-            border: 1px solid #444;
-            transition: all 0.3s ease;
-        }
-        .quiz-card:hover {
-            border-color: #666;
-        }
-        
-        .option-btn {
-            transition: 0.2s;
-            text-align: left;
-            margin-bottom: 8px;
-            white-space: normal; /* ให้ข้อความยาวๆ ขึ้นบรรทัดใหม่ได้ */
+        @media print {
+            body * { visibility: hidden; }
+            #markdown-content, #markdown-content * { visibility: visible; }
+            #markdown-content { position: absolute; left: 0; top: 0; width: 100%; color: black !important; background-color: white !important; overflow: visible !important; }
+            .bg-dark { background-color: transparent !important; border: none !important; }
+            .btn { display: none !important; }
         }
 
-        .quiz-card .card-text {
-        color: #ffffff !important;
-        font-size: 15px
+        /* 🎚️ แถบเลื่อน (Resizer) สำหรับปรับขนาดจอ (อัปเกรดให้จับง่ายขึ้น!) */
+        #drag-resizer {
+            width: 24px; /* เพิ่มพื้นที่รับเมาส์ให้กว้างสะใจ ปาดมาแถวนี้ก็จับได้เลย */
+            background-color: transparent; /* ซ่อนพื้นหลังให้โปร่งใส */
+            cursor: col-resize;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
         }
-
-        .quiz-question-text {
-            font-size: 1rem; /* ลดขนาดลง (เดิม fs-5 คือประมาณ 1.25rem) */
-            color: #ffffff;
-            font-weight: 600;
-            margin-bottom: 15px;
+        /* สร้างเส้นจำลองตรงกลางให้มองเห็นได้ */
+        #drag-resizer::after {
+            content: '';
+            width: 2px; /* เส้นจริงบนจอจะเล็กนิดเดียว เพื่อความสวยงาม */
+            height: 100%;
+            background-color: #444; /* สีเทาเข้ม */
+            transition: all 0.2s ease;
+        }
+        /* ตอนเอาเมาส์ไปชี้หรือกดลาก ให้เส้นสว่างขึ้นและหนาขึ้นนิดนึง */
+        #drag-resizer:hover::after, #drag-resizer:active::after {
+            background-color: #00d2ff; /* เปลี่ยนเป็นสีฟ้าสว่าง */
+            width: 4px; /* ขยายเส้นให้ชัดขึ้นตอนจับ */
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-8 p-0 d-flex align-items-center justify-content-center bg-black" style="height: 100vh;">
-                <video id="mainVideo" controls style="width: 100%; max-height: 100vh;">
-                    <source src="{{ video_url }}" type="video/mp4">
-                    Browser ของคุณไม่รองรับวิดีโอ
-                </video>
+    <div class="container-fluid p-0">
+        <div class="d-flex w-100" style="height: 100vh;">
+            <div id="video-container" class="p-0 d-flex align-items-center justify-content-center bg-black" style="width: 65%;">
+                {% if is_youtube %}
+                    <div id="youtube-player" style="width: 100%; height: 100%;"></div>
+                {% elif is_audio %}
+                    <div class="d-flex flex-column justify-content-center align-items-center w-100 h-100" style="background-color: #1a1a1a;">
+                        <img src="/cortisol.gif" alt="Playing Audio" style="max-height: 40vh; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                        <div class="mt-4 text-white-50 small"><i class="fas fa-music me-2"></i>Audio Mode</div>
+                        <audio id="local-video" controls class="mt-3" style="width: 70%; outline: none;">
+                            <source src="/stream-video/{{ video_filename }}">
+                        </audio>
+                    </div>
+                {% else %}
+                    <video id="local-video" controls style="width: 100%; max-height: 100vh;">
+                        <source src="/stream-video/{{ video_filename }}">
+                    </video>
+                {% endif %}
             </div>
 
-            <div class="col-md-4 sidebar p-4">
-                <h3 class="text-info mb-4">🧠 LectureLens Analysis</h3>
-                
-                <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#summary-tab">สรุปเนื้อหา</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#quiz-tab">แบบฝึกหัด 
-                            {% if data.quizzes %}<span class="badge bg-warning text-dark">{{ data.quizzes|length }}</span>{% endif %}
-                        </button>
-                    </li>
+            <div id="drag-resizer"></div>
+
+            <div id="sidebar-container" class="sidebar p-4" style="width: 35%; flex-grow: 1;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="text-info m-0">VA-Summar</h3>
+                    <a href="/" class="btn btn-outline-light btn-sm d-flex align-items-center">
+                        <i class="fas fa-house-door me-2"></i> Back to Home
+                    </a>
+                </div>
+
+                <ul class="nav nav-tabs mb-4" id="analysisTab" role="tablist"> 
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#summary-tab">Timeline</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#guide-tab">Study Guide</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#flashcard-tab">Flash Card</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#quiz-tab">Quiz</button></li>
                 </ul>
 
                 <div class="tab-content">
-                    
                     <div class="tab-pane fade show active" id="summary-tab">
                         <div class="alert alert-dark border-secondary mb-4">
-                            <strong>👤 ผู้พูด:</strong> {{ data.speaker_info }}
+                            <strong>👤 Speaker:</strong> {{ data.speaker_info }}
                         </div>
-
-                        <h5 class="text-warning mb-3">📌 ประเด็นสำคัญ (คลิกเวลาเพื่อดู):</h5>
+                        <h5 class="text-warning mb-3">📌 Points:</h5>
                         <div class="list-group list-group-flush bg-transparent mb-4">
                             {% for point in data.summary_points %}
-                            <button class="list-group-item list-group-item-action bg-transparent text-white border-secondary ps-0 d-flex align-items-start" 
-                                    onclick="seekVideo('{{ point.time }}')">
+                            <button class="list-group-item list-group-item-action bg-transparent text-white border-secondary ps-0 d-flex align-items-start" onclick="seekVideo('{{ point.time }}')">
                                 <span class="badge bg-primary me-3">{{ point.time }}</span>
                                 <span>{{ point.text }}</span>
                             </button>
                             {% endfor %}
                         </div>
+                    </div>
 
-                        <div class="bg-dark p-3 rounded border border-secondary">
-                            <small class="text-info text-uppercase fw-bold">💡 Key Takeaways</small>
-                            <p class="mb-0 mt-2 text-white-50">{{ data.key_takeaways }}</p>
+                    <div class="tab-pane fade" id="guide-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="text-success m-0"><i class="fas fa-book-open me-2"></i>Study Guide</h5>
+                            <div class="d-flex gap-2 align-items-center"> 
+                                <button class="btn btn-sm btn-outline-secondary text-white" onclick="copySummary()"><i class="fas fa-copy"></i> Copy</button>
+                                <button class="btn btn-sm btn-danger text-white" onclick="downloadPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                            </div>
+                        </div>
+                        <div class="bg-dark p-4 rounded border border-secondary mb-4" style="max-height: 50vh; overflow-y: auto;">
+                            <div id="markdown-content" class="text-white"></div>
+                        </div>
+                        <div class="bg-dark p-3 rounded border border-secondary mt-4">
+                            <h6 class="text-info mb-3"><i class="fas fa-robot me-2"></i>AI Tutor Q&A</h6>
+                            <div id="chat-box" class="mb-3" style="height: 200px; overflow-y: auto;">
+                                <div class="mb-3 text-start"><div class="p-2 rounded text-dark d-inline-block" style="background-color: #e9ecef; font-size: 0.9rem;">Hello! Ask me</div></div>
+                            </div>
+                            <div class="input-group">
+                                <input type="text" id="chat-input" class="form-control bg-black text-white border-secondary" placeholder="Type here..." onkeypress="handleChatKeyPress(event)">
+                                <button class="btn btn-primary" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+                            </div>
                         </div>
                     </div>
 
+                    <div class="tab-pane fade" id="flashcard-tab">
+                        {% for card in data.flashcards %}
+                        <div class="flashcard-container" onclick="this.classList.toggle('flipped')">
+                            <div class="flashcard-inner">
+                                <div class="flashcard-front"><div>{{ card.front }}</div></div>
+                                <div class="flashcard-back"><div>{{ card.back }}</div></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
                     <div class="tab-pane fade" id="quiz-tab">
-                        {% if data.quizzes %}
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="text-warning m-0"><i class="fas fa-question-circle me-2"></i>Practice Quiz</h5>
+                            <button class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#genMoreQuizModal">
+                                <i class="fas fa-magic"></i> Gen More Quiz
+                            </button>
+                        </div>
+                        <div id="quiz-list-container">
                             {% for quiz in data.quizzes %}
                             <div class="card quiz-card mb-4" id="quiz-card-{{ quiz.id }}">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between mb-2">
-                                        <span class="badge bg-secondary">ข้อที่ {{ loop.index }}</span>
-                                        <span class="badge bg-dark border border-secondary">{{ quiz.type }}</span>
+                                        <span class="badge bg-secondary">#{{ loop.index }}</span>
+                                        <span class="badge border border-secondary small text-uppercase">{{ quiz.type | replace('_', ' ') }}</span>
                                     </div>
-                                    
                                     <p class="quiz-question-text">{{ quiz.question }}</p>
-                                    
-                                    <div class="d-grid gap-0">
-                                        {% for option in quiz.options %}
-                                        <button class="btn btn-outline-light option-btn" 
-                                                onclick="checkAnswer(this, '{{ quiz.id }}', {{ loop.index0 }}, {{ quiz.correct_answer_index }})">
-                                            {{ option }}
-                                        </button>
-                                        {% endfor %}
-                                    </div>
-
+                                    {% if quiz.type == 'multiple_choice' or quiz.type == 'true_false' %}
+                                        <div class="d-grid gap-2">
+                                            {% for option in quiz.options %}
+                                            <button class="btn btn-outline-light option-btn" onclick="checkAnswer(this, '{{ quiz.id }}', {{ loop.index0 }}, {{ quiz.correct_answer_index }})">{{ option }}</button>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <textarea id="answer-{{ quiz.id }}" class="form-control mb-3 bg-dark text-white border-secondary" rows="3" placeholder="Type here..."></textarea>
+                                        <button class="btn btn-primary w-100" onclick='checkWrittenAnswer("{{ quiz.id }}", {{ quiz.keywords | tojson | safe }}, "{{ quiz.suggested_answer }}")'>Check</button>
+                                    {% endif %}
                                     <div id="feedback-{{ quiz.id }}" class="mt-3 p-3 rounded" style="display:none; background: rgba(0,0,0,0.3);">
                                         <div class="result-header fw-bold mb-1"></div>
-                                        <div class="small text-info">
-                                            💡 <span class="explanation-text">{{ quiz.explanation }}</span>
-                                        </div>
+                                        <div class="small text-info mt-2">💡 {{ quiz.explanation }}</div>
                                     </div>
                                 </div>
                             </div>
                             {% endfor %}
-                        {% else %}
-                            <div class="text-center text-muted mt-5">
-                                ❌ ไม่พบข้อมูลแบบฝึกหัด
-                            </div>
-                        {% endif %}
+                        </div>
                     </div>
-
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="modal fade" id="genMoreQuizModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border-info text-white">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">AI Quiz Generator</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="small text-info">Number of Questions</label>
+                        <select id="more-q-num" class="form-select bg-black text-white border-secondary">
+                            <option value="5">5 Questions</option>
+                            <option value="10">10 Questions</option>
+                            <option value="20">20 Questions</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-info">Difficulty Level</label>
+                        <select id="more-q-diff" class="form-select bg-black text-white border-secondary">
+                            <option value="easy">Easy</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <div id="gen-loading" class="text-center d-none">
+                        <div class="spinner-border text-info mb-2"></div>
+                        <p class="small">AI is thinking of new questions...</p>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button class="btn btn-info w-100" id="btn-start-gen" onclick="generateMoreQuizzes()">Generate Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3"><div id="copyToast" class="toast align-items-center text-bg-secondary border-0" role="alert"><div class="d-flex"><div class="toast-body">Copied!</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script>
-        function checkAnswer(btn, quizId, selectedIndex, correctIndex) {
-            // 1. หา Element ต่างๆ ใน Card นั้นๆ
+        var isYoutube = {{ 'true' if is_youtube else 'false' }};
+        var ytPlayer;
+
+        function seekVideo(timeStr) {
+            const parts = timeStr.split(':');
+            let secs = parts.length === 2 ? parseInt(parts[0]) * 60 + parseInt(parts[1]) : parseInt(parts[0]);
+            if (isYoutube) { if (ytPlayer && ytPlayer.seekTo) { ytPlayer.seekTo(secs, true); ytPlayer.playVideo(); } }
+            else { const video = document.getElementById('local-video'); if (video) { video.currentTime = secs; video.play(); } }
+        }
+
+        function onYouTubeIframeAPIReady() {
+            if (isYoutube) {
+                ytPlayer = new YT.Player('youtube-player', {
+                    videoId: '{{ youtube_id | default("") }}',
+                    playerVars: { 'playsinline': 1, 'autoplay': 0 }
+                });
+            }
+        }
+
+        function checkAnswer(btn, quizId, selected, correct) {
             const card = document.getElementById(`quiz-card-${quizId}`);
-            const allBtns = card.querySelectorAll('.option-btn');
             const feedbackBox = document.getElementById(`feedback-${quizId}`);
             const header = feedbackBox.querySelector('.result-header');
 
-            // 2. ปิดการกดปุ่มซ้ำ (Disable all buttons in this card)
+            // หาปุ่มตัวเลือกทั้งหมดในข้อนี้
+            const allBtns = card.querySelectorAll('.option-btn');
+
+            // ปิดปุ่มทั้งหมดไม่ให้กดซ้ำ (จะได้ไม่โกงกดข้ออื่นต่อได้)
             allBtns.forEach(b => b.disabled = true);
 
-            // 3. ตรวจคำตอบ (ใช้ Index เทียบกัน แม่นยำกว่า Text)
-            if (selectedIndex === correctIndex) {
-                // ตอบถูก
-                btn.classList.remove('btn-outline-light');
-                btn.classList.add('btn-success');
-                
-                header.innerHTML = "✅ ถูกต้อง! เก่งมาก";
-                header.className = "result-header fw-bold text-success mb-1";
-            } else {
-                // ตอบผิด
-                btn.classList.remove('btn-outline-light');
-                btn.classList.add('btn-danger'); // ปุ่มที่กดเป็นสีแดง
-                
-                // เฉลยปุ่มที่ถูกให้เป็นสีเขียว
-                if (allBtns[correctIndex]) {
-                    allBtns[correctIndex].classList.remove('btn-outline-light');
-                    allBtns[correctIndex].classList.add('btn-success');
+            if (selected === correct) { 
+                btn.className = "btn btn-success option-btn"; 
+                header.innerHTML = "✅ Correct!"; 
+                header.className = "result-header text-success"; 
+            } else { 
+                btn.className = "btn btn-danger option-btn"; // เปลี่ยนข้อที่เรากดผิดเป็นสีแดง
+
+                // ไฮไลท์ข้อที่ถูกต้องจริงๆ ให้เป็นสีเขียว
+                if (allBtns[correct]) {
+                    allBtns[correct].className = "btn btn-success option-btn"; 
                 }
-
-                header.innerHTML = "❌ ยังไม่ถูกครับ";
-                header.className = "result-header fw-bold text-danger mb-1";
+                header.innerHTML = "❌ Wrong"; 
+                header.className = "result-header text-danger"; 
             }
-
-            // 4. แสดงส่วนเฉลย
+            // โชว์กล่องคำอธิบาย
             feedbackBox.style.display = 'block';
         }
-    </script>
-    <script>
-    function seekVideo(timeStr) {
-        const video = document.getElementById('mainVideo');
-        if (!video) return;
 
-        // แปลงรูปแบบ "นาที:วินาที" (เช่น 02:15) ให้เป็นวินาทีรวม (135)
-        const parts = timeStr.split(':');
-        let totalSeconds = 0;
+        document.addEventListener("DOMContentLoaded", function() {
+            let rawMarkdown = {{ data.comprehensive_summary | default('""') | tojson | safe }};
+            
+            if (rawMarkdown) {
+                const mathBlocks = [];
+                let counter = 0;
 
-        if (parts.length === 2) {
-            // กรณีนาที:วินาที
-            totalSeconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-        } else if (parts.length === 3) {
-            // กรณีชั่วโมง:นาที:วินาที
-            totalSeconds = (parseInt(parts[0]) * 3600) + (parseInt(parts[1]) * 60) + parseInt(parts[2]);
-        } else {
-            // กรณีเป็นวินาทีมาเลย
-            totalSeconds = parseInt(parts[0]);
+                // 🛡️ 1. ซ่อมตู้เซฟ: ดักจับทั้งแบบ \[ ... \], \( ... \) และแบบมี Backslash หลายตัว
+                // ดึงสูตรออกมาก่อน เพื่อไม่ให้ marked.parse เข้าไปยุ่งกับเครื่องหมายปีกกา { }
+                rawMarkdown = rawMarkdown.replace(/\\{1,2}\[([\s\S]*?)\\{1,2}\]|\\{1,2}\(([\s\S]*?)\\{1,2}\)/g, function(match) {
+                    mathBlocks.push(match); 
+                    return `@@MATHBLOCK_${counter++}@@`;
+                });
+
+                // 📝 2. แปลง Markdown (ที่ไม่มีสูตรกวนใจแล้ว)
+                let htmlContent = marked.parse(rawMarkdown);
+
+                // 🎁 3. คืนค่าสูตรจากตู้เซฟกลับมาวางที่เดิม
+                for (let i = 0; i < counter; i++) {
+                    // ใช้ replace แบบระบุเจาะจงเพื่อไม่ให้เพี้ยน
+                    htmlContent = htmlContent.replace(`@@MATHBLOCK_${i}@@`, mathBlocks[i]);
+                }
+
+                // นำไปแสดงผล
+                const contentArea = document.getElementById('markdown-content');
+                contentArea.innerHTML = htmlContent;
+                
+                // 🧮 4. สั่ง MathJax แปลงสูตร (เพิ่ม Delay นิดนึงเพื่อความชัวร์)
+                setTimeout(() => {
+                    if (window.MathJax && window.MathJax.typesetPromise) {
+                        MathJax.typesetPromise([contentArea]).catch((err) => console.log(err));
+                    }
+                }, 100);
+
+            } else {
+                document.getElementById('markdown-content').innerHTML = "<p class='text-white-50'>No study guide available.</p>";
+            }
+        });
+
+        // ฟังก์ชันสำหรับกด Enter เพื่อส่งข้อความแชท
+        function handleChatKeyPress(event) { 
+            if (event.key === "Enter") {
+                event.preventDefault(); // ป้องกันไม่ให้หน้าเว็บกระตุก
+                sendMessage(); 
+            }
         }
 
-        // สั่งวิดีโอไปยังตำแหน่งเวลา และเริ่มเล่นทันที
-        video.currentTime = totalSeconds;
-        video.play();
+        async function sendMessage() {
+            const inputField = document.getElementById('chat-input');
+            const message = inputField.value.trim();
+            if (message === "") return;
 
-        // เลื่อนหน้าจอไปที่ส่วนวิดีโอ (เน้นประสบการณ์ผู้ใช้บนมือถือ)
-        video.scrollIntoView({ behavior: 'smooth' });
-    }
-</script>
+            const chatBox = document.getElementById('chat-box');
+
+            // 1. โชว์ข้อความฝั่งเรา (You)
+            chatBox.innerHTML += `<div class="mb-3 text-end"><div class="p-2 rounded text-white d-inline-block text-start" style="background-color: #007bff; max-width: 85%;">${message}</div></div>`;
+            inputField.value = "";
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // 🌟 2. โชว์สถานะ AI กำลังคิด (เพิ่มเข้ามาใหม่ตรงนี้ครับ!)
+            const typingId = "typing-" + Date.now();
+            chatBox.innerHTML += `
+                <div class="mb-3 text-start" id="${typingId}">
+                    <div class="p-2 rounded text-dark d-inline-block" style="background-color: #e9ecef; max-width: 85%;">
+                        <i class="fas fa-ellipsis-h fa-fade"></i> I'm thinking...
+                    </div>
+                </div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                // ส่งข้อมูลไปหา Python
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message, context: document.getElementById('markdown-content').innerText })
+                });
+                const data = await response.json();
+
+                // 🌟 3. ลบคำว่า "I'm thinking..." ออกเมื่อได้คำตอบแล้ว
+                document.getElementById(typingId).remove();
+
+                // 4. แสดงคำตอบจาก AI
+                chatBox.innerHTML += `<div class="mb-3 text-start"><div class="p-2 rounded text-dark d-inline-block" style="background-color: #e9ecef; max-width: 85%;">${data.answer.replace(/\n/g, '<br>')}</div></div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (error) { 
+                document.getElementById(typingId).remove(); // ลบออกเหมือนกันถ้า Error
+                chatBox.innerHTML += `<div class="text-danger small mb-3">❌ Connection failed.</div>`; 
+            }
+        }
+
+        function appendNewQuiz() {
+            const question = document.getElementById('new-q-text').value.trim();
+            const optionsStr = document.getElementById('new-q-options').value.trim();
+            const correctIdx = parseInt(document.getElementById('new-q-correct').value) - 1;
+            if (!question || !optionsStr) return alert("Please fill all fields");
+            const options = optionsStr.split(',').map(s => s.trim());
+            const quizId = "custom-" + Date.now();
+            let html = `<div class="card quiz-card mb-4 border-success" id="quiz-card-${quizId}" style="border-style: dashed;"><div class="card-body"><div class="d-flex justify-content-between mb-2"><span class="badge bg-success">User Added</span></div><p class="quiz-question-text">${question}</p><div class="d-grid gap-2">${options.map((opt, i) => `<button class="btn btn-outline-light option-btn" onclick="checkAnswer(this, '${quizId}', ${i}, ${correctIdx})">${opt}</button>`).join('')}</div><div id="feedback-${quizId}" class="mt-3 p-3 rounded" style="display:none; background: rgba(0,0,0,0.3);"><div class="result-header fw-bold mb-1"></div></div></div></div>`;
+            document.getElementById('quiz-list-container').insertAdjacentHTML('afterbegin', html);
+            bootstrap.Modal.getInstance(document.getElementById('addQuizModal')).hide();
+        }
+
+        async function generateMoreQuizzes() {
+            const num = document.getElementById('more-q-num').value;
+            const diff = document.getElementById('more-q-diff').value;
+            const btn = document.getElementById('btn-start-gen');
+            const loading = document.getElementById('gen-loading');
+            
+            // ดึงชื่อไฟล์จากตัวแปรที่คุณส่งมาจาก Python
+            const filename = "{{ video_filename }}"; 
+
+            btn.disabled = true;
+            loading.classList.remove('d-none');
+
+            try {
+                const response = await fetch('/generate-more-quiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        video_filename: filename,
+                        num_questions: parseInt(num),
+                        difficulty: diff
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.quizzes) {
+                    result.quizzes.forEach((quiz, index) => {
+                        const quizId = "ai-extra-" + Date.now() + index;
+                        let html = `
+                            <div class="card quiz-card mb-4 border-info">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="badge bg-info text-dark">AI Extra</span>
+                                        <span class="badge border border-secondary text-uppercase">${quiz.type.replace('_', ' ')}</span>
+                                    </div>
+                                    <p class="quiz-question-text">${quiz.question}</p>
+                                    <div class="d-grid gap-2">
+                                        ${quiz.options.map((opt, i) => `
+                                            <button class="btn btn-outline-light option-btn" onclick="checkAnswer(this, '${quizId}', ${i}, ${quiz.correct_answer_index})">
+                                                ${opt}
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                    <div id="feedback-${quizId}" class="mt-3 p-3 rounded" style="display:none; background: rgba(0,0,0,0.3);">
+                                        <div class="result-header fw-bold mb-1"></div>
+                                        <div class="small text-info">💡 ${quiz.explanation}</div>
+                                    </div>
+                                </div>
+                            </div>`;
+                        document.getElementById('quiz-list-container').insertAdjacentHTML('beforeend', html);
+                    });
+                }
+
+                bootstrap.Modal.getInstance(document.getElementById('genMoreQuizModal')).hide();
+            } catch (error) {
+                alert("Failed to generate more quizzes. Please try again.");
+            } finally {
+                btn.disabled = false;
+                loading.classList.add('d-none');
+            }
+        }
+
+        // ==========================================
+        // 🎚️ ระบบลากขยาย Sidebar
+        // ==========================================
+        const resizer = document.getElementById('drag-resizer');
+        const videoContainer = document.getElementById('video-container');
+        const sidebarContainer = document.getElementById('sidebar-container');
+        let isResizing = false;
+
+        // เมื่อกดเมาส์ค้างที่แถบ
+        resizer.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none'; 
+            
+            // 🌟 ทริคสำคัญ: สั่งปิดการรับคลิกของกล่องวิดีโอชั่วคราว
+            // เพื่อป้องกันไม่ให้ YouTube หรือ Video แย่งสัญญาณเมาส์ไปเวลาเราสะบัดเมาส์เร็วๆ
+            videoContainer.style.pointerEvents = 'none';
+            sidebarContainer.style.pointerEvents = 'none';
+        });
+
+        // เมื่อขยับเมาส์ซ้าย-ขวา
+        document.addEventListener('mousemove', function(e) {
+            if (!isResizing) return;
+            
+            let newVideoWidth = (e.clientX / window.innerWidth) * 100;
+            
+            if (newVideoWidth > 30 && newVideoWidth < 75) {
+                videoContainer.style.width = newVideoWidth + '%';
+                sidebarContainer.style.width = (100 - newVideoWidth) + '%';
+            }
+        });
+
+        // เมื่อปล่อยคลิกเมาส์
+        document.addEventListener('mouseup', function(e) {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+                document.body.style.userSelect = 'auto';
+                
+                // 🌟 คืนค่าให้วิดีโอและ Sidebar กลับมาคลิกใช้งานได้ตามปกติ
+                videoContainer.style.pointerEvents = 'auto';
+                sidebarContainer.style.pointerEvents = 'auto';
+            }
+        });
+    </script>
 </body>
 </html>

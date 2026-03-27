@@ -1,81 +1,150 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LectureLens AI</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
     <style>
-        #loadingOverlay {
-            display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
-            background:rgba(0,0,0,0.85); z-index:9999; text-align:center; padding-top:20vh;
+        body {
+            font-family: 'K2D', sans-serif;
+            background-color: #f0f4f8;
         }
+
+        .app-logo {
+            width: 70px;
+            height: auto;
+            filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.2));
+        }
+
+        /* Loading Overlay สไตล์ของคุณปอนด์ */
+        #loadingOverlay {
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9);
+            z-index: 9999; 
+            text-align: center; 
+            padding-top: 25vh;
+        }
+
+        #loadingOverlay h2 {
+            font-size: 4rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        #loadingOverlay p {
+            font-size: 1.8rem;
+            opacity: 0.8;
+        }
+
+        .spinner-border {
+            width: 5rem !important;
+            height: 5rem !important;
+        }
+
+        .card { border-radius: 15px; overflow: hidden; }
+        .btn-primary { background-color: #007bff; border: none; }
+        .btn-success { background-color: #28a745; border: none; }
     </style>
 </head>
-<body class="bg-light">
-    <div id="loadingOverlay">
-        <div class="spinner-border text-warning" style="width: 4rem; height: 4rem;" role="status"></div>
-        <h2 class="text-white mt-4">🧠 LectureLens AI กำลังประมวลผล...</h2>
-        <p class="text-muted">วิดีโอยาวอาจใช้เวลาสักครู่ กรุณาอย่าปิดหน้านี้</p>
+<body>
+    <div id="loadingOverlay" class="text-center">
+        <img src="/cortisol.gif" alt="AI is analyzing..." class="img-fluid mb-4" style="max-height: 180px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0, 212, 255, 0.2);">
+        <br>
+        <h2 class="text-white mt-4" id="loading-text">Analyzing... Please wait</h2>
+        <p class="text-white-50 mt-3">Please do not close this window</p>
     </div>
 
     <div class="container mt-5">
         <div class="card shadow-lg border-0 mx-auto" style="max-width: 600px;">
-            <div class="card-header bg-primary text-white text-center py-4">
-                <h1><i class="fas fa-robot"></i> LectureLens AI</h1>
-                <p class="mb-0">พัฒนาโดย กฤตภาส เย็นใจ [cite: 6]</p>
+            <div class="card-header bg-primary text-white py-4 border-0 text-center">
+                <img src="/logo.png" alt="VA Logo" class="app-logo mb-2">
+                <h1 class="fw-bold mb-0">VA-Summar</h1>
+                <p class="mb-0 opacity-75 mt-1">Developed by Kittapas Yenjai</p>
             </div>
-            <div class="card-body p-4">
-                
-                <form action="/process-file" method="post" enctype="multipart/form-data">
-                    <h5 class="text-muted mb-3"><i class="fas fa-file-video"></i> อัปโหลดไฟล์วิดีโอ</h5>
+
+            <div class="card-body p-4 bg-white">
+
+                {% if error_msg %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i> {{ error_msg }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
+                <form action="/process-file" method="post" enctype="multipart/form-data" id="uploadFormFile">
+                    <h5 class="text-muted mb-3"><i class="fas fa-file-video me-2"></i>Video Upload</h5>
                     <div class="input-group mb-3">
-                        <input type="file" name="file" class="form-control" accept="video/*" required>
-                        <button type="submit" class="btn btn-primary">วิเคราะห์ไฟล์</button>
+                        <input type="file" name="file" class="form-control" accept="video/*,audio/*" required>
+                        <button type="submit" class="btn btn-primary px-4">Analyze</button>
                     </div>
-                    
-                    <div class="row">
+
+                    <div class="row g-2">
                         <div class="col-6">
-                            <label class="small text-muted">จำนวนข้อสอบ:</label>
+                            <label class="small text-muted">Questions:</label>
                             <select name="num_questions" class="form-select form-select-sm">
-                                <option value="3">3 ข้อ</option>
-                                <option value="5" selected>5 ข้อ</option>
-                                <option value="10">10 ข้อ</option>
+                                <option value="5" selected>5 Questions</option> 
+                                <option value="10">10 Questions</option>
+                                <option value="20">20 Questions</option>
                             </select>
                         </div>
                         <div class="col-6">
-                            <label class="small text-muted">ระดับความยาก:</label>
+                            <label class="small text-muted">Difficulty:</label>
                             <select name="difficulty" class="form-select form-select-sm">
-                                <option value="easy">ง่าย</option>
-                                <option value="medium" selected>ปานกลาง</option>
-                                <option value="hard">ยาก</option>
+                                <option value="easy">Easy</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="hard">Hard</option>
                             </select>
+                        </div>
+                        <div class="col-12 mt-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="includeWrittenFile" name="include_written" value="true">
+                                <label class="form-check-label text-dark" for="includeWrittenFile"> 📝 Short Answer Questions
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </form>
 
                 <hr class="my-4">
 
-                <form action="/process-url" method="post">
-                    <h5 class="text-muted mb-3"><i class="fab fa-youtube"></i> วางลิงก์ YouTube</h5>
+                <form action="/process-url" method="post" id="uploadFormUrl">
+                    <h5 class="text-muted mb-3"><i class="fab fa-youtube me-2"></i>YouTube URL</h5>
                     <div class="input-group mb-3">
                         <input type="text" name="video_url" class="form-control" placeholder="https://www.youtube.com/watch?v=..." required>
-                        <button type="submit" class="btn btn-success">วิเคราะห์ลิงก์</button>
+                        <button type="submit" class="btn btn-success px-4">Analyze</button>
                     </div>
-                    
-                    <div class="row">
+
+                    <div class="row g-2">
                         <div class="col-6">
                             <select name="num_questions" class="form-select form-select-sm">
-                                <option value="3">3 ข้อ</option>
-                                <option value="5" selected>5 ข้อ</option>
-                                <option value="10">10 ข้อ</option>
+                                <option value="5" selected>5 Questions</option>
+                                <option value="10">10 Questions</option>
+                                <option value="20">20 Questions</option>
                             </select>
                         </div>
                         <div class="col-6">
                             <select name="difficulty" class="form-select form-select-sm">
-                                <option value="easy">ง่าย</option>
-                                <option value="medium" selected>ปานกลาง</option>
-                                <option value="hard">ยาก</option>
+                                <option value="easy">Easy</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="hard">Hard</option>
                             </select>
+                        </div>
+                        <div class="col-12 mt-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="includeWrittenUrl" name="include_written" value="true">
+                                <label class="form-check-label text-dark" for="includeWrittenUrl"> 📝 Short Answer Questions
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -84,10 +153,36 @@
     </div>
 
     <script>
+        // 1. ดักจับตอนที่กดปุ่ม Upload (ส่ง Form)
         document.querySelectorAll('form').forEach(form => {
             form.addEventListener('submit', function() {
+                // โชว์หน้า Loading (เปลี่ยนการใช้ d-none เป็น style.display ตาม CSS ของคุณปอนด์)
                 document.getElementById('loadingOverlay').style.display = 'block';
+                
+                // สร้าง "ประวัติจำลอง" ให้ปุ่ม Back ทำงานได้
+                history.pushState({ isUploading: true }, "", window.location.href);
             });
+        });
+
+        // 2. ดักจับเหตุการณ์ตอนผู้ใช้กดปุ่ม "ย้อนกลับ (Back)" บนเบราว์เซอร์
+        window.addEventListener('popstate', function(event) {
+            const overlay = document.getElementById('loadingOverlay');
+            
+            if (overlay && overlay.style.display === 'block') {
+                // ซ่อนหน้าจอ Loading ดำๆ ทันที
+                overlay.style.display = 'none';
+                
+                // บังคับเตะกลับหน้าแรก (โหลดใหม่) เพื่อล้างการเชื่อมต่อทั้งหมด
+                window.location.href = "/"; 
+            }
+        });
+
+        // 3. ระบบป้องกันเหนียว: ถ้าเผลอกดย้อนกลับมาจากหน้าสรุป
+        window.addEventListener('pageshow', function(event) {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay && overlay.style.display === 'block') {
+                overlay.style.display = 'none';
+            }
         });
     </script>
 </body>
