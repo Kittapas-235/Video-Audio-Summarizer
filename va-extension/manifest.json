@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "VA-Summar",
+  "version": "1.0",
+  "description": "สรุปวิดีโอ YouTube และสร้างแบบทดสอบอัตโนมัติ",
+  "permissions": ["activeTab"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  }
+}

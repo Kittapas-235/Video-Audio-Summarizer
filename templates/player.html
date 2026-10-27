@@ -2,15 +2,28 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>LectureLens Player | VA-Summar</title>
+    <title>Lila Player</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quando&display=swap" rel="stylesheet">
+
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)'], ['$', '$']],
+                displayMath: [['\\[', '\\]'], ['$$', '$$']]
+            }
+        };
+    </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
     <style>
@@ -41,48 +54,266 @@
             .btn { display: none !important; }
         }
 
-        /* 🎚️ แถบเลื่อน (Resizer) สำหรับปรับขนาดจอ (อัปเกรดให้จับง่ายขึ้น!) */
+        /* 🎚️ แถบเลื่อน (Resizer) สำหรับปรับขนาดจอ */
         #drag-resizer {
-            width: 24px; /* เพิ่มพื้นที่รับเมาส์ให้กว้างสะใจ ปาดมาแถวนี้ก็จับได้เลย */
-            background-color: transparent; /* ซ่อนพื้นหลังให้โปร่งใส */
+            width: 24px; 
+            background-color: transparent; 
             cursor: col-resize;
             z-index: 10;
             display: flex;
             justify-content: center;
         }
-        /* สร้างเส้นจำลองตรงกลางให้มองเห็นได้ */
         #drag-resizer::after {
             content: '';
-            width: 2px; /* เส้นจริงบนจอจะเล็กนิดเดียว เพื่อความสวยงาม */
+            width: 2px; 
             height: 100%;
-            background-color: #444; /* สีเทาเข้ม */
+            background-color: #444; 
             transition: all 0.2s ease;
         }
-        /* ตอนเอาเมาส์ไปชี้หรือกดลาก ให้เส้นสว่างขึ้นและหนาขึ้นนิดนึง */
         #drag-resizer:hover::after, #drag-resizer:active::after {
-            background-color: #00d2ff; /* เปลี่ยนเป็นสีฟ้าสว่าง */
-            width: 4px; /* ขยายเส้นให้ชัดขึ้นตอนจับ */
+            background-color: #00d2ff; 
+            width: 4px; 
         }
+
+        /* 🛠️ แก้ปัญหา Flashcard เนื้อหาล้นกรอบ */
+        .flashcard-front div, .flashcard-back div {
+            max-height: 100%;      
+            width: 100%;            
+            overflow-y: auto;       
+            overflow-x: auto;       
+            overflow-wrap: break-word; 
+            word-break: break-word;
+            padding-right: 4px;     
+        }
+        .flashcard-front div::-webkit-scrollbar,
+        .flashcard-back div::-webkit-scrollbar { width: 4px; height: 4px; }
+        .flashcard-front div::-webkit-scrollbar-thumb,
+        .flashcard-back div::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.3); border-radius: 4px; }
+        .flashcard-front div::-webkit-scrollbar-track,
+        .flashcard-back div::-webkit-scrollbar-track { background: transparent; }
+
+        /* 🌟 CSS แอนิเมชัน Thinking ของ AI Chatbot 🌟 */
+        .thinking-bubble {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 18px;
+            background-color: #f1f3f5;
+            border-radius: 15px;
+            border-bottom-left-radius: 2px;
+            width: fit-content;
+            margin-bottom: 10px;
+        }
+        .thinking-bubble .dot {
+            width: 6px;
+            height: 6px;
+            background-color: #868e96;
+            border-radius: 50%;
+            animation: wave-animation 1.2s infinite ease-in-out;
+        }
+        .thinking-bubble .dot:nth-child(1) { animation-delay: 0s; }
+        .thinking-bubble .dot:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-bubble .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        /* 1. แต่งเนื้อหาสรุป AI ให้อ่านง่าย */
+        .ai-summary-content {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: #e0e0e0;
+        }
+
+        /* แต่ง Heading ให้ดูมีคลาส (มีเส้นใต้บางๆ) */
+        .ai-summary-content h1, .ai-summary-content h2, .ai-summary-content h3 {
+            color: #00d2ff;
+            margin-top: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* 2. แต่งปุ่มแท็บ (Timeline, Study Guide, Quiz) ให้เนียนขึ้น */
+        .nav-pills .nav-link {
+            color: #888;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            margin-right: 5px;
+        }
+        
+        .nav-pills .nav-link:hover {
+            color: #fff;
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        /* สไตล์ตอนแท็บถูกเลือก (Active) */
+        .nav-pills .nav-link.active, .nav-pills .show > .nav-link {
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+            border-radius: 12px;
+        }
+
+        /* 3. กล่องแชทบอท */
+        .chat-bubble {
+            border-radius: 18px;
+            padding: 12px 18px;
+            margin-bottom: 15px;
+            max-width: 85%;
+            line-height: 1.5;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .chat-bubble.user {
+            background-color: #2a2a2a;
+            color: #fff;
+            margin-left: auto; /* ดันไปขวา */
+            border-bottom-right-radius: 4px; /* มุมขวาล่างแหลม */
+        }
+        
+        .chat-bubble.bot {
+            background-color: #1a1a1a;
+            color: #00d2ff;
+            border-left: 3px solid #00d2ff; /* มีขีดสีฟ้าด้านซ้าย */
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+        
+        @keyframes wave-animation {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+
+        /* ============================================================
+           🎨 Lila theme: แต่งแถบด้านข้างของ Player (ใช้เฉพาะบนจอ ไม่กระทบตอนพิมพ์ PDF)
+           คงชื่อ class/id เดิมทั้งหมด เพื่อให้ JavaScript ทำงานเหมือนเดิม
+           ============================================================ */
+        @media screen {
+            :root { --lila-a1:#9a6bff; --lila-a2:#2f6bff; --lila-ink:#eef0ff; --lila-muted:#a9b0d6; --lila-line:rgba(255,255,255,.12); --lila-glass:rgba(255,255,255,.06); --lila-soft:#c9b4ff; }
+            body { background-color: #0f1830; }
+
+            #sidebar-container {
+                background:
+                    radial-gradient(520px 320px at 100% 0%, rgba(154,107,255,.22), transparent 70%),
+                    radial-gradient(480px 360px at 0% 100%, rgba(47,107,255,.18), transparent 70%),
+                    #15223c;
+                border-left: 1px solid var(--lila-line);
+                padding: 24px !important;
+            }
+            #sidebar-container::-webkit-scrollbar-track { background: transparent; }
+            #sidebar-container::-webkit-scrollbar-thumb { background: rgba(154,107,255,.45); }
+            #sidebar-container :focus-visible { outline: 3px solid #9db8ff; outline-offset: 2px; }
+            #sidebar-container .text-info { color: var(--lila-soft) !important; }
+            #drag-resizer::after { background-color: var(--lila-line); }
+            #drag-resizer:hover::after, #drag-resizer:active::after { background-color: var(--lila-a1); }
+
+            /* หัวแถบ */
+            .lila-brand { display:flex; align-items:center; gap:10px; }
+            .lila-logo { width:38px; height:38px; object-fit:contain; }
+            .lila-brand span { font-family:'Quando', serif; font-size:1.5rem; line-height:1; }
+            #sidebar-container .lila-back { border-radius:999px; border-color:var(--lila-line); background:var(--lila-glass); color:var(--lila-ink); padding:6px 14px; }
+            #sidebar-container .lila-back:hover { background:linear-gradient(135deg,var(--lila-a1),var(--lila-a2)); border-color:transparent; color:#fff; }
+
+            /* แท็บแบบ segmented */
+            #analysisTab { border:0; background:var(--lila-glass); padding:4px; border-radius:14px; gap:4px; flex-wrap:nowrap; overflow-x:auto; }
+            #analysisTab .nav-item { flex:1 0 auto; }
+            #analysisTab .nav-link { width:100%; border:0; border-radius:10px; padding:9px 12px; font-size:.9rem; font-weight:500; white-space:nowrap; color:var(--lila-muted); background:transparent; transition:all .2s; }
+            #analysisTab .nav-link:hover { color:#fff; background:rgba(255,255,255,.07); }
+            #analysisTab .nav-link.active { color:#fff; font-weight:600; border:0; background:linear-gradient(135deg,var(--lila-a1),var(--lila-a2)); box-shadow:0 6px 18px rgba(80,90,255,.4); }
+
+            /* Timeline */
+            #sidebar-container .alert-dark { background:rgba(154,107,255,.14); color:var(--lila-ink); border:0 !important; border-left:3px solid var(--lila-a1) !important; border-radius:0 12px 12px 0; padding:12px 14px; }
+            #summary-tab h5.text-warning, #quiz-tab h5.text-warning { color:#ffd84d !important; font-size:1rem; font-weight:600; }
+            #summary-tab .list-group-item { background:var(--lila-glass) !important; color:var(--lila-ink) !important; border:1px solid transparent !important; border-radius:12px !important; margin-bottom:8px; padding:12px 14px !important; line-height:1.5; transition:all .15s; }
+            #summary-tab .list-group-item:hover { background:rgba(255,255,255,.11) !important; border-color:rgba(154,107,255,.6) !important; transform:translateX(2px); }
+            #summary-tab .badge.bg-primary { background:linear-gradient(135deg,var(--lila-a1),var(--lila-a2)) !important; border-radius:8px; padding:5px 8px; font-size:.75rem; font-weight:600; }
+
+            /* Study Guide + AI Tutor */
+            #guide-tab .bg-dark { background:rgba(10,16,34,.55) !important; border-color:var(--lila-line) !important; border-radius:16px !important; }
+            #guide-tab h5.text-success { color:var(--lila-soft) !important; }
+            #guide-tab .btn-outline-secondary { border-radius:999px; border-color:var(--lila-line); background:var(--lila-glass); }
+            #guide-tab .btn-danger { border:0; border-radius:999px; background:linear-gradient(135deg,#ff6b81,#ff8a5b); }
+            #chat-input { background:rgba(255,255,255,.06) !important; border-color:var(--lila-line) !important; border-radius:12px 0 0 12px !important; }
+            #guide-tab .input-group .btn-primary { border:0; border-radius:0 12px 12px 0; background:linear-gradient(135deg,var(--lila-a1),var(--lila-a2)); }
+            #chat-box .bg-primary { background:linear-gradient(135deg,var(--lila-a1),var(--lila-a2)) !important; border-radius:16px 16px 4px 16px !important; padding:.6rem .9rem !important; }
+            #chat-box .text-dark.d-inline-block { background:rgba(255,255,255,.1) !important; color:var(--lila-ink) !important; border-radius:16px 16px 16px 4px !important; padding:.6rem .9rem !important; }
+            .thinking-bubble { background:rgba(255,255,255,.1) !important; }
+            .thinking-bubble .dot { background:var(--lila-soft) !important; }
+            .ai-summary-content h1, .ai-summary-content h2, .ai-summary-content h3 { color:var(--lila-soft); }
+
+            /* Flashcard */
+            .flashcard-front, .flashcard-back { border-radius:18px; border:1px solid var(--lila-line); }
+            .flashcard-front { background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.04)); color:#e2d6ff; font-weight:600; }
+            .flashcard-back { background:linear-gradient(135deg,var(--lila-a1),var(--lila-a2)); color:#fff; }
+            .flashcard-container:hover .flashcard-front, .flashcard-container:hover .flashcard-back { border-color:var(--lila-a1); }
+
+            /* Quiz */
+            .quiz-card { background:var(--lila-glass) !important; border:1px solid var(--lila-line) !important; border-radius:16px !important; }
+            .quiz-card .badge.bg-secondary { background:linear-gradient(135deg,var(--lila-a1),var(--lila-a2)) !important; }
+            .quiz-card .badge.border { border-color:var(--lila-line) !important; color:var(--lila-muted); }
+            #quiz-tab .btn-info { border:0; border-radius:999px; color:#fff; background:linear-gradient(135deg,var(--lila-a1),var(--lila-a2)); }
+            .quiz-card textarea { background:rgba(255,255,255,.06) !important; border-color:var(--lila-line) !important; border-radius:12px; }
+            .quiz-card .btn-primary { border:0; border-radius:12px; background:linear-gradient(135deg,var(--lila-a1),var(--lila-a2)); }
+            #sidebar-container .option-btn { border-radius:12px; padding:11px 14px; font-size:.92rem; color:var(--lila-ink); background:var(--lila-glass); border-color:var(--lila-line); }
+            #sidebar-container .option-btn:hover { background:rgba(154,107,255,.16); border-color:var(--lila-a1); color:#fff; }
+            #sidebar-container .option-btn.btn-success { background:rgba(74,222,128,.18); border-color:#4ade80; color:#eafff2; opacity:1; }
+            #sidebar-container .option-btn.btn-danger { background:rgba(255,122,127,.18); border-color:#ff7a7f; color:#fff0f0; opacity:1; }
+            #sidebar-container .option-btn:disabled:not(.btn-success):not(.btn-danger) { opacity:.55; }
+            [id^="feedback-"] { background:rgba(10,16,34,.5) !important; border:1px solid var(--lila-line); border-radius:12px !important; }
+
+            /* Modal: Gen More Quiz */
+            #genMoreQuizModal .modal-content { background:rgba(21,34,60,.94) !important; border:1px solid var(--lila-line) !important; border-radius:20px; -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); }
+            #genMoreQuizModal .text-info { color:var(--lila-soft) !important; }
+            #genMoreQuizModal .form-select { background-color:rgba(255,255,255,.06) !important; border-color:var(--lila-line) !important; border-radius:10px; }
+            #genMoreQuizModal .btn-info { border:0; border-radius:12px; color:#fff; background:linear-gradient(135deg,var(--lila-a1),var(--lila-a2)); }
+        }
+        @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
     </style>
 </head>
 <body>
     <div class="container-fluid p-0">
         <div class="d-flex w-100" style="height: 100vh;">
-            <div id="video-container" class="p-0 d-flex align-items-center justify-content-center bg-black" style="width: 65%;">
-                {% if is_youtube %}
-                    <div id="youtube-player" style="width: 100%; height: 100%;"></div>
-                {% elif is_audio %}
-                    <div class="d-flex flex-column justify-content-center align-items-center w-100 h-100" style="background-color: #1a1a1a;">
-                        <img src="/cortisol.gif" alt="Playing Audio" style="max-height: 40vh; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-                        <div class="mt-4 text-white-50 small"><i class="fas fa-music me-2"></i>Audio Mode</div>
-                        <audio id="local-video" controls class="mt-3" style="width: 70%; outline: none;">
-                            <source src="/stream-video/{{ video_filename }}">
-                        </audio>
-                    </div>
+            <div id="video-container" class="video-container d-flex align-items-center justify-content-center" style="width: 65%; height: 100vh; background: #000; overflow: hidden; position: relative;">
+
+                {% if is_youtube and youtube_id %}
+                    <iframe style="width: 100%; height: 100%;" 
+                            id="youtube-player" src="https://www.youtube.com/embed/{{ youtube_id }}?enablejsapi=1" 
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                    </iframe>
+                    
+                {% elif video_filename %}
+                    <!-- 🌟 เพิ่มเงื่อนไขแยกประเภทไฟล์ตรงนี้ 🌟 -->
+                    {% if '.pdf' in video_filename|lower %}
+                        <!-- 1. สำหรับไฟล์ PDF -->
+                        <iframe src="/stream-video/{{ video_filename }}" style="width: 100%; height: 100%; background: #fff;" frameborder="0"></iframe>
+                    
+                    {% elif '.docx' in video_filename|lower or '.txt' in video_filename|lower %}
+                        <!-- 2. สำหรับไฟล์เอกสารอื่นๆ (Word, Text) -->
+                        <div class="d-flex flex-column justify-content-center align-items-center text-secondary h-100 w-100 bg-dark">
+                            <i class="fas fa-file-word fa-4x mb-3 text-info"></i>
+                            <h4 class="text-white">Document Analyzed</h4>
+                            <p class="small text-center px-4">เนื้อหาเอกสารถูกประมวลผลเรียบร้อยแล้ว<br>กรุณาอ่านสรุปที่ด้านขวา</p>
+                            <a href="/stream-video/{{ video_filename }}" class="btn btn-outline-light btn-sm mt-3" download>Download Original File</a>
+                        </div>
+                    
+                    {% else %}
+                        <!-- 3. สำหรับไฟล์ Video และ Audio (ของเดิม) -->
+                        <video id="local-video" style="width: 100%; height: 100%;" controls controlsList="nodownload">
+                            <source src="/stream-video/{{ video_filename }}" type="video/mp4">
+                            <source src="/stream-video/{{ video_filename }}" type="audio/mpeg">
+                            Your browser does not support the video tag.
+                        </video>
+                    {% endif %}
+                    
                 {% else %}
-                    <video id="local-video" controls style="width: 100%; max-height: 100vh;">
-                        <source src="/stream-video/{{ video_filename }}">
-                    </video>
+                    <!-- กรณีที่ไฟล์ถูกลบไปแล้ว -->
+                    <div class="d-flex flex-column justify-content-center align-items-center text-secondary" style="width: 100%; height: 100%;">
+                        <img src="/logo.png" alt="" class="mb-3" style="width:72px; opacity:.45; filter:grayscale(.5);">
+                        <h4 class="text-white-50">Video Expired</h4>
+                        <p class="small text-center px-4">
+                            ไฟล์สื่อนี้ถูกลบออกจากระบบเพื่อประหยัดพื้นที่แล้ว<br>
+                            (คุณยังสามารถทบทวนสรุปเนื้อหาและทำ Quiz ด้านขวาได้ตามปกติ)
+                        </p>
+                    </div>
                 {% endif %}
             </div>
 
@@ -90,8 +321,8 @@
 
             <div id="sidebar-container" class="sidebar p-4" style="width: 35%; flex-grow: 1;">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3 class="text-info m-0">VA-Summar</h3>
-                    <a href="/" class="btn btn-outline-light btn-sm d-flex align-items-center">
+                    <div class="lila-brand"><img src="/logo.png" alt="" class="lila-logo"><span>Lila</span></div>
+                    <a href="/" class="btn btn-outline-light btn-sm d-flex align-items-center lila-back">
                         <i class="fas fa-house-door me-2"></i> Back to Home
                     </a>
                 </div>
@@ -99,11 +330,12 @@
                 <ul class="nav nav-tabs mb-4" id="analysisTab" role="tablist"> 
                     <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#summary-tab">Timeline</button></li>
                     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#guide-tab">Study Guide</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#flashcard-tab">Flash Card</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#flashcard-tab">Flashcard</button></li>
                     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#quiz-tab">Quiz</button></li>
                 </ul>
 
                 <div class="tab-content">
+                    <!-- Timeline Tab -->
                     <div class="tab-pane fade show active" id="summary-tab">
                         <div class="alert alert-dark border-secondary mb-4">
                             <strong>👤 Speaker:</strong> {{ data.speaker_info }}
@@ -119,21 +351,24 @@
                         </div>
                     </div>
 
+                    <!-- Study Guide & AI Tutor Tab -->
                     <div class="tab-pane fade" id="guide-tab">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="text-success m-0"><i class="fas fa-book-open me-2"></i>Study Guide</h5>
                             <div class="d-flex gap-2 align-items-center"> 
-                                <button class="btn btn-sm btn-outline-secondary text-white" onclick="copySummary()"><i class="fas fa-copy"></i> Copy</button>
+                                <button class="btn btn-sm btn-outline-secondary text-white" onclick="copyStudyGuide()"><i class="fas fa-copy"></i> Copy</button>
                                 <button class="btn btn-sm btn-danger text-white" onclick="downloadPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
                             </div>
                         </div>
                         <div class="bg-dark p-4 rounded border border-secondary mb-4" style="max-height: 50vh; overflow-y: auto;">
                             <div id="markdown-content" class="text-white"></div>
                         </div>
+                        
+                        <!-- 🤖 AI Tutor Chatbot Section -->
                         <div class="bg-dark p-3 rounded border border-secondary mt-4">
                             <h6 class="text-info mb-3"><i class="fas fa-robot me-2"></i>AI Tutor Q&A</h6>
                             <div id="chat-box" class="mb-3" style="height: 200px; overflow-y: auto;">
-                                <div class="mb-3 text-start"><div class="p-2 rounded text-dark d-inline-block" style="background-color: #e9ecef; font-size: 0.9rem;">Hello! Ask me</div></div>
+                                <div class="mb-3 text-start"><div class="p-2 rounded text-dark d-inline-block" style="background-color: #e9ecef; font-size: 0.9rem;">Hello! Ask me anything about the content.</div></div>
                             </div>
                             <div class="input-group">
                                 <input type="text" id="chat-input" class="form-control bg-black text-white border-secondary" placeholder="Type here..." onkeypress="handleChatKeyPress(event)">
@@ -142,6 +377,7 @@
                         </div>
                     </div>
 
+                    <!-- Flashcard Tab -->
                     <div class="tab-pane fade" id="flashcard-tab">
                         {% for card in data.flashcards %}
                         <div class="flashcard-container" onclick="this.classList.toggle('flipped')">
@@ -153,6 +389,7 @@
                         {% endfor %}
                     </div>
 
+                    <!-- Quiz Tab -->
                     <div class="tab-pane fade" id="quiz-tab">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h5 class="text-warning m-0"><i class="fas fa-question-circle me-2"></i>Practice Quiz</h5>
@@ -169,16 +406,28 @@
                                         <span class="badge border border-secondary small text-uppercase">{{ quiz.type | replace('_', ' ') }}</span>
                                     </div>
                                     <p class="quiz-question-text">{{ quiz.question }}</p>
-                                    {% if quiz.type == 'multiple_choice' or quiz.type == 'true_false' %}
-                                        <div class="d-grid gap-2">
+                                    
+                                    {% if quiz.type == 'true_false' %}
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <button class="btn btn-outline-light w-100 option-btn" onclick="checkAnswer(this, '{{ quiz.id }}', 0, {{ quiz.correct_answer_index }})">
+                                                    <i class="fas fa-check-circle me-1 text-success"></i> True
+                                                </button>
+                                            </div>
+                                            <div class="col-6">
+                                                <button class="btn btn-outline-light w-100 option-btn" onclick="checkAnswer(this, '{{ quiz.id }}', 1, {{ quiz.correct_answer_index }})">
+                                                    <i class="fas fa-times-circle me-1 text-danger"></i> False
+                                                </button>
+                                            </div>
+                                        </div>
+                                    {% elif quiz.type == 'multiple_choice' %}
+                                        <div class="d-grid gap-2 mt-2">
                                             {% for option in quiz.options %}
                                             <button class="btn btn-outline-light option-btn" onclick="checkAnswer(this, '{{ quiz.id }}', {{ loop.index0 }}, {{ quiz.correct_answer_index }})">{{ option }}</button>
                                             {% endfor %}
                                         </div>
-                                    {% else %}
-                                        <textarea id="answer-{{ quiz.id }}" class="form-control mb-3 bg-dark text-white border-secondary" rows="3" placeholder="Type here..."></textarea>
-                                        <button class="btn btn-primary w-100" onclick='checkWrittenAnswer("{{ quiz.id }}", {{ quiz.keywords | tojson | safe }}, "{{ quiz.suggested_answer }}")'>Check</button>
                                     {% endif %}
+                                    
                                     <div id="feedback-{{ quiz.id }}" class="mt-3 p-3 rounded" style="display:none; background: rgba(0,0,0,0.3);">
                                         <div class="result-header fw-bold mb-1"></div>
                                         <div class="small text-info mt-2">💡 {{ quiz.explanation }}</div>
@@ -193,6 +442,7 @@
         </div>
     </div>
 
+    <!-- Gen More Quiz Modal -->
     <div class="modal fade" id="genMoreQuizModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-dark border-info text-white">
@@ -229,6 +479,7 @@
         </div>
     </div>
 
+    <!-- Toast for Copy Confirmation -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3"><div id="copyToast" class="toast align-items-center text-bg-secondary border-0" role="alert"><div class="d-flex"><div class="toast-body">Copied!</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -237,6 +488,7 @@
         var isYoutube = {{ 'true' if is_youtube else 'false' }};
         var ytPlayer;
 
+        // Video Player Functions
         function seekVideo(timeStr) {
             const parts = timeStr.split(':');
             let secs = parts.length === 2 ? parseInt(parts[0]) * 60 + parseInt(parts[1]) : parseInt(parts[0]);
@@ -253,35 +505,31 @@
             }
         }
 
+        // Quiz Functions
         function checkAnswer(btn, quizId, selected, correct) {
             const card = document.getElementById(`quiz-card-${quizId}`);
             const feedbackBox = document.getElementById(`feedback-${quizId}`);
             const header = feedbackBox.querySelector('.result-header');
-
-            // หาปุ่มตัวเลือกทั้งหมดในข้อนี้
             const allBtns = card.querySelectorAll('.option-btn');
 
-            // ปิดปุ่มทั้งหมดไม่ให้กดซ้ำ (จะได้ไม่โกงกดข้ออื่นต่อได้)
             allBtns.forEach(b => b.disabled = true);
 
             if (selected === correct) { 
-                btn.className = "btn btn-success option-btn"; 
+                btn.classList.replace('btn-outline-light', 'btn-success');
                 header.innerHTML = "✅ Correct!"; 
                 header.className = "result-header text-success"; 
             } else { 
-                btn.className = "btn btn-danger option-btn"; // เปลี่ยนข้อที่เรากดผิดเป็นสีแดง
-
-                // ไฮไลท์ข้อที่ถูกต้องจริงๆ ให้เป็นสีเขียว
+                btn.classList.replace('btn-outline-light', 'btn-danger');
                 if (allBtns[correct]) {
-                    allBtns[correct].className = "btn btn-success option-btn"; 
+                    allBtns[correct].classList.replace('btn-outline-light', 'btn-success');
                 }
                 header.innerHTML = "❌ Wrong"; 
                 header.className = "result-header text-danger"; 
             }
-            // โชว์กล่องคำอธิบาย
             feedbackBox.style.display = 'block';
         }
 
+        // Study Guide Rendering (Markdown + MathJax)
         document.addEventListener("DOMContentLoaded", function() {
             let rawMarkdown = {{ data.comprehensive_summary | default('""') | tojson | safe }};
             
@@ -289,30 +537,23 @@
                 const mathBlocks = [];
                 let counter = 0;
 
-                // 🛡️ 1. ซ่อมตู้เซฟ: ดักจับทั้งแบบ \[ ... \], \( ... \) และแบบมี Backslash หลายตัว
-                // ดึงสูตรออกมาก่อน เพื่อไม่ให้ marked.parse เข้าไปยุ่งกับเครื่องหมายปีกกา { }
                 rawMarkdown = rawMarkdown.replace(/\\{1,2}\[([\s\S]*?)\\{1,2}\]|\\{1,2}\(([\s\S]*?)\\{1,2}\)/g, function(match) {
                     mathBlocks.push(match); 
                     return `@@MATHBLOCK_${counter++}@@`;
                 });
 
-                // 📝 2. แปลง Markdown (ที่ไม่มีสูตรกวนใจแล้ว)
                 let htmlContent = marked.parse(rawMarkdown);
 
-                // 🎁 3. คืนค่าสูตรจากตู้เซฟกลับมาวางที่เดิม
                 for (let i = 0; i < counter; i++) {
-                    // ใช้ replace แบบระบุเจาะจงเพื่อไม่ให้เพี้ยน
                     htmlContent = htmlContent.replace(`@@MATHBLOCK_${i}@@`, mathBlocks[i]);
                 }
 
-                // นำไปแสดงผล
                 const contentArea = document.getElementById('markdown-content');
                 contentArea.innerHTML = htmlContent;
                 
-                // 🧮 4. สั่ง MathJax แปลงสูตร (เพิ่ม Delay นิดนึงเพื่อความชัวร์)
                 setTimeout(() => {
                     if (window.MathJax && window.MathJax.typesetPromise) {
-                        MathJax.typesetPromise([contentArea]).catch((err) => console.log(err));
+                        MathJax.typesetPromise().catch((err) => console.log(err));
                     }
                 }, 100);
 
@@ -321,77 +562,151 @@
             }
         });
 
-        // ฟังก์ชันสำหรับกด Enter เพื่อส่งข้อความแชท
-        function handleChatKeyPress(event) { 
-            if (event.key === "Enter") {
-                event.preventDefault(); // ป้องกันไม่ให้หน้าเว็บกระตุก
-                sendMessage(); 
+        // 🌟🌟 🌟 ส่วนของ AI Chatbot (Streaming + Thinking Animation) 🌟 🌟 🌟 
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
             }
         }
 
+        // 1. เพิ่มข้อความที่ผู้ใช้พิมพ์ลงในกล่องแชท
+        function appendUserMessage(text) {
+            const chatBox = document.getElementById('chat-box');
+            const msgHtml = `<div class="mb-3 text-end"><div class="p-2 rounded d-inline-block text-white bg-primary" style="font-size: 0.9rem;">${text}</div></div>`;
+            chatBox.insertAdjacentHTML('beforeend', msgHtml);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // 2. แสดง Animation "กำลังคิด"
+        function showThinkingIndicator() {
+            const chatBox = document.getElementById('chat-box');
+            const thinkingHtml = `
+                <div id="ai-thinking" class="thinking-bubble text-start">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+            `;
+            chatBox.insertAdjacentHTML('beforeend', thinkingHtml);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // 3. ลบ Animation "กำลังคิด" ทิ้ง
+        function removeThinkingIndicator() {
+            const thinkingDiv = document.getElementById('ai-thinking');
+            if (thinkingDiv) {
+                thinkingDiv.remove();
+            }
+        }
+
+        // 4. สร้างกล่องข้อความเตรียมรับคำตอบจาก AI
+        function createAiMessageDiv() {
+            const chatBox = document.getElementById('chat-box');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mb-3 text-start';
+            
+            const messageBubble = document.createElement('div');
+            messageBubble.className = 'p-2 rounded text-dark d-inline-block';
+            messageBubble.style.backgroundColor = '#e9ecef';
+            messageBubble.style.fontSize = '0.9rem';
+            
+            wrapper.appendChild(messageBubble);
+            chatBox.appendChild(wrapper);
+            return messageBubble;
+        }
+
+        // 5. ฟังก์ชันส่งข้อความและรับคำตอบแบบ Streaming 
         async function sendMessage() {
             const inputField = document.getElementById('chat-input');
-            const message = inputField.value.trim();
-            if (message === "") return;
+            const userText = inputField.value.trim();
+            if (!userText) return;
 
-            const chatBox = document.getElementById('chat-box');
-
-            // 1. โชว์ข้อความฝั่งเรา (You)
-            chatBox.innerHTML += `<div class="mb-3 text-end"><div class="p-2 rounded text-white d-inline-block text-start" style="background-color: #007bff; max-width: 85%;">${message}</div></div>`;
-            inputField.value = "";
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-            // 🌟 2. โชว์สถานะ AI กำลังคิด (เพิ่มเข้ามาใหม่ตรงนี้ครับ!)
-            const typingId = "typing-" + Date.now();
-            chatBox.innerHTML += `
-                <div class="mb-3 text-start" id="${typingId}">
-                    <div class="p-2 rounded text-dark d-inline-block" style="background-color: #e9ecef; max-width: 85%;">
-                        <i class="fas fa-ellipsis-h fa-fade"></i> I'm thinking...
-                    </div>
-                </div>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
+            // เคลียร์ช่องพิมพ์
+            inputField.value = '';
+            
+            // แสดงข้อความของผู้ใช้ และ คลื่นกำล้งคิด
+            appendUserMessage(userText);
+            showThinkingIndicator();
 
             try {
-                // ส่งข้อมูลไปหา Python
+                // ดึง Context จากหน้าเว็บไปให้ AI ประมวลผลร่วมด้วย
+                const contextText = document.getElementById('markdown-content').innerText;
+
+                // 🌟 เปลี่ยน URL เป็น /chat (หรือ /api/chat ตามที่แก้ใน main.py)
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message, context: document.getElementById('markdown-content').innerText })
+                    body: JSON.stringify({ 
+                        message: userText,
+                        context: contextText 
+                    })
                 });
-                const data = await response.json();
 
-                // 🌟 3. ลบคำว่า "I'm thinking..." ออกเมื่อได้คำตอบแล้ว
-                document.getElementById(typingId).remove();
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
-                // 4. แสดงคำตอบจาก AI
-                chatBox.innerHTML += `<div class="mb-3 text-start"><div class="p-2 rounded text-dark d-inline-block" style="background-color: #e9ecef; max-width: 85%;">${data.answer.replace(/\n/g, '<br>')}</div></div>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
-            } catch (error) { 
-                document.getElementById(typingId).remove(); // ลบออกเหมือนกันถ้า Error
-                chatBox.innerHTML += `<div class="text-danger small mb-3">❌ Connection failed.</div>`; 
+                // เตรียมอ่านข้อมูลแบบสตรีม
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let isFirstChunk = true;
+                let aiMessageContentBox = null;
+                let fullAiText = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunkText = decoder.decode(value, {stream: true});
+                    
+                    // ทันทีที่ข้อมูลก้อนแรกส่งกลับมา ให้ลบคลื่นทิ้งแล้วสร้างกล่องรอพิมพ์
+                    if (isFirstChunk) {
+                        removeThinkingIndicator();
+                        aiMessageContentBox = createAiMessageDiv();
+                        isFirstChunk = false;
+                    }
+
+                    // สะสมคำตอบและแสดงผล
+                    fullAiText += chunkText;
+                    
+                    // เนื่องจาก Gemini อาจจะส่งตัวหนา (**) หรือขึ้นบรรทัดใหม่มา 
+                    // สามารถแปลงเบื้องต้นให้ดูง่ายขึ้นก่อนแสดง (หรือจะใช้ marked.parse ถ้าต้องการความสวยงาม)
+                    aiMessageContentBox.innerHTML = fullAiText.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    
+                    const chatBox = document.getElementById('chat-box');
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+
+                // สั่งให้ MathJax สแกนหาตัวเลข/สมการในกล่องแชท
+                if (window.MathJax && window.MathJax.typesetPromise) {
+                   MathJax.typesetPromise([aiMessageContentBox]).catch((err) => console.log(err));
+                }
+
+            } catch (error) {
+                console.error("Chat error:", error);
+                removeThinkingIndicator();
+                
+                // ถ้ายิง API พลาด ให้แสดงกล่องข้อความ Error
+                const errorBox = createAiMessageDiv();
+                errorBox.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Sorry, I encountered an error. Please try again.</span>';
             }
         }
 
-        function appendNewQuiz() {
-            const question = document.getElementById('new-q-text').value.trim();
-            const optionsStr = document.getElementById('new-q-options').value.trim();
-            const correctIdx = parseInt(document.getElementById('new-q-correct').value) - 1;
-            if (!question || !optionsStr) return alert("Please fill all fields");
-            const options = optionsStr.split(',').map(s => s.trim());
-            const quizId = "custom-" + Date.now();
-            let html = `<div class="card quiz-card mb-4 border-success" id="quiz-card-${quizId}" style="border-style: dashed;"><div class="card-body"><div class="d-flex justify-content-between mb-2"><span class="badge bg-success">User Added</span></div><p class="quiz-question-text">${question}</p><div class="d-grid gap-2">${options.map((opt, i) => `<button class="btn btn-outline-light option-btn" onclick="checkAnswer(this, '${quizId}', ${i}, ${correctIdx})">${opt}</button>`).join('')}</div><div id="feedback-${quizId}" class="mt-3 p-3 rounded" style="display:none; background: rgba(0,0,0,0.3);"><div class="result-header fw-bold mb-1"></div></div></div></div>`;
-            document.getElementById('quiz-list-container').insertAdjacentHTML('afterbegin', html);
-            bootstrap.Modal.getInstance(document.getElementById('addQuizModal')).hide();
-        }
-
+        // ==========================================
+        // ➕ ฟังก์ชัน Generate More Quiz
+        // ==========================================
         async function generateMoreQuizzes() {
             const num = document.getElementById('more-q-num').value;
             const diff = document.getElementById('more-q-diff').value;
             const btn = document.getElementById('btn-start-gen');
             const loading = document.getElementById('gen-loading');
             
-            // ดึงชื่อไฟล์จากตัวแปรที่คุณส่งมาจาก Python
-            const filename = "{{ video_filename }}"; 
+            const contextText = document.getElementById('markdown-content').innerText;
+            if (!contextText || contextText.trim() === "") {
+                alert("Study Guide is empty. Cannot generate quizzes.");
+                return;
+            }
 
             btn.disabled = true;
             loading.classList.remove('d-none');
@@ -401,7 +716,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        video_filename: filename,
+                        context: contextText,
                         num_questions: parseInt(num),
                         difficulty: diff
                     })
@@ -409,41 +724,102 @@
 
                 const result = await response.json();
                 
-                if (result.quizzes) {
+                if (result.quizzes && result.quizzes.length > 0) {
                     result.quizzes.forEach((quiz, index) => {
                         const quizId = "ai-extra-" + Date.now() + index;
+                        
+                        const quizType = (quiz.type || 'multiple_choice').toLowerCase().trim();
+                        let inputHtml = '';
+                        
+                        if (quizType.includes('true') || quizType.includes('false')) {
+                            const correctIdx = quiz.correct_answer_index || 0;
+                            inputHtml = `
+                                <div class="row g-2 mt-2">
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-light w-100 option-btn" onclick="checkAnswer(this, '${quizId}', 0, ${correctIdx})">
+                                            <i class="fas fa-check-circle me-1 text-success"></i> True
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-light w-100 option-btn" onclick="checkAnswer(this, '${quizId}', 1, ${correctIdx})">
+                                            <i class="fas fa-times-circle me-1 text-danger"></i> False
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        else if (quizType.includes('multiple') || quizType.includes('choice')) {
+                            const safeOptions = quiz.options || ["A", "B", "C", "D"];
+                            const correctIdx = quiz.correct_answer_index || 0;
+                            inputHtml = `
+                                <div class="d-grid gap-2 mt-2">
+                                    ${safeOptions.map((opt, i) => `
+                                        <button class="btn btn-outline-light option-btn" onclick="checkAnswer(this, '${quizId}', ${i},${correctIdx})">
+                                            ${opt}
+                                        </button>
+                                    `).join('')}
+                                </div>
+                            `;
+                        }
+
+                        let displayType = quizType.replace('_', ' ').toUpperCase();
+
                         let html = `
-                            <div class="card quiz-card mb-4 border-info">
+                            <div class="card quiz-card mb-4 border-info" id="quiz-card-${quizId}">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between mb-2">
-                                        <span class="badge bg-info text-dark">AI Extra</span>
-                                        <span class="badge border border-secondary text-uppercase">${quiz.type.replace('_', ' ')}</span>
+                                        <span class="badge bg-info text-dark">AI Fast Track</span>
+                                        <span class="badge border border-secondary">${displayType}</span>
                                     </div>
                                     <p class="quiz-question-text">${quiz.question}</p>
-                                    <div class="d-grid gap-2">
-                                        ${quiz.options.map((opt, i) => `
-                                            <button class="btn btn-outline-light option-btn" onclick="checkAnswer(this, '${quizId}', ${i}, ${quiz.correct_answer_index})">
-                                                ${opt}
-                                            </button>
-                                        `).join('')}
-                                    </div>
+                                    
+                                    ${inputHtml}
+                                    
                                     <div id="feedback-${quizId}" class="mt-3 p-3 rounded" style="display:none; background: rgba(0,0,0,0.3);">
                                         <div class="result-header fw-bold mb-1"></div>
-                                        <div class="small text-info">💡 ${quiz.explanation}</div>
+                                        <div class="small text-info mt-2">💡 ${quiz.explanation || "ไม่มีคำอธิบายเพิ่มเติม"}</div>
                                     </div>
                                 </div>
                             </div>`;
+                        
                         document.getElementById('quiz-list-container').insertAdjacentHTML('beforeend', html);
                     });
+                    
+                    if (window.MathJax) {
+                        const quizContainer = document.getElementById('quiz-list-container');
+                        MathJax.typesetClear([quizContainer]);
+                        MathJax.typesetPromise([quizContainer]).catch((err) => console.log(err));
+                    }
                 }
 
                 bootstrap.Modal.getInstance(document.getElementById('genMoreQuizModal')).hide();
             } catch (error) {
+                console.error(error);
                 alert("Failed to generate more quizzes. Please try again.");
             } finally {
                 btn.disabled = false;
                 loading.classList.add('d-none');
             }
+        }
+
+        // ==========================================
+        // 📋 ฟังก์ชัน Utility (Copy & PDF)
+        // ==========================================
+        function copyStudyGuide() {
+            const content = document.getElementById('markdown-content'); 
+            if (content) {
+                navigator.clipboard.writeText(content.innerText).then(() => {
+                    const toastEl = document.getElementById('copyToast');
+                    const toast = new bootstrap.Toast(toastEl);
+                    toast.show();
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                });
+            }
+        }
+
+        function downloadPDF() {
+            window.print();
         }
 
         // ==========================================
@@ -454,38 +830,28 @@
         const sidebarContainer = document.getElementById('sidebar-container');
         let isResizing = false;
 
-        // เมื่อกดเมาส์ค้างที่แถบ
         resizer.addEventListener('mousedown', function(e) {
             isResizing = true;
             document.body.style.cursor = 'col-resize';
             document.body.style.userSelect = 'none'; 
-            
-            // 🌟 ทริคสำคัญ: สั่งปิดการรับคลิกของกล่องวิดีโอชั่วคราว
-            // เพื่อป้องกันไม่ให้ YouTube หรือ Video แย่งสัญญาณเมาส์ไปเวลาเราสะบัดเมาส์เร็วๆ
             videoContainer.style.pointerEvents = 'none';
             sidebarContainer.style.pointerEvents = 'none';
         });
 
-        // เมื่อขยับเมาส์ซ้าย-ขวา
         document.addEventListener('mousemove', function(e) {
             if (!isResizing) return;
-            
             let newVideoWidth = (e.clientX / window.innerWidth) * 100;
-            
             if (newVideoWidth > 30 && newVideoWidth < 75) {
                 videoContainer.style.width = newVideoWidth + '%';
                 sidebarContainer.style.width = (100 - newVideoWidth) + '%';
             }
         });
 
-        // เมื่อปล่อยคลิกเมาส์
         document.addEventListener('mouseup', function(e) {
             if (isResizing) {
                 isResizing = false;
                 document.body.style.cursor = 'default';
                 document.body.style.userSelect = 'auto';
-                
-                // 🌟 คืนค่าให้วิดีโอและ Sidebar กลับมาคลิกใช้งานได้ตามปกติ
                 videoContainer.style.pointerEvents = 'auto';
                 sidebarContainer.style.pointerEvents = 'auto';
             }

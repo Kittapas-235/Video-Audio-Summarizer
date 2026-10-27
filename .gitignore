@@ -18,3 +18,7 @@ temp_uploads/*
 # LTI Keys
 lti_config/*.key
 lti_config/private.key
+
+# Database and Cookies
+va_summar.db
+cookies.txt

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Login | Lila</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Quando&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+        *, *::before, *::after { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; font-family: 'Google Sans', 'Kanit', sans-serif; color: #fff; background: #15223c; }
+        #vanta-bg { position: relative; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+        .glow { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(900px 500px at 50% -10%, rgba(154,107,255,.32), transparent 70%); }
+
+        /* 🏠 ปุ่มกลับหน้าแรก */
+        .home-link { position: absolute; z-index: 3; top: 16px; left: 16px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: .88rem; color: #fff; text-decoration: none; background: rgba(255,255,255,.12); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.28); border-radius: 999px; transition: background .15s; }
+        .home-link:hover { background: linear-gradient(135deg, #9a6bff, #2f6bff); border-color: transparent; }
+        .home-link i { font-size: .78rem; transition: transform .15s; }
+        .home-link:hover i { transform: translateX(-2px); }
+
+        /* 🪟 การ์ดกระจก (สไตล์เดียวกับหน้าแรก) */
+        .auth-card {
+            position: relative; z-index: 2; width: 100%; max-width: 420px; padding: 34px 32px 30px;
+            background: linear-gradient(145deg, rgba(255,255,255,.20), rgba(255,255,255,.07));
+            -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%);
+            border: 1px solid rgba(255,255,255,.28); border-radius: 22px;
+            box-shadow: 0 30px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.35);
+        }
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .auth-card { background: rgba(20,32,61,.92); } }
+
+        .brand { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 24px; }
+        .brand .logo { width: 62px; height: 62px; object-fit: contain; margin-bottom: 10px; }
+        .brand h1 { margin: 0; font-family: 'Quando', serif; font-weight: 400; font-size: 2.1rem; line-height: 1.1; }
+        .brand p { margin: 8px 0 0; color: rgba(255,255,255,.72); font-size: .95rem; }
+
+        .alert { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 18px; padding: 11px 14px; border-radius: 12px; font-size: .88rem; line-height: 1.45; border: 1px solid; }
+        .alert.err { background: rgba(255,122,127,.16); border-color: rgba(255,122,127,.55); color: #ffd9db; }
+        .alert.ok { background: rgba(74,222,128,.16); border-color: rgba(74,222,128,.55); color: #d6ffe4; }
+        .alert[hidden] { display: none; }
+
+        label { display: block; margin: 0 0 6px; font-size: .85rem; color: rgba(255,255,255,.72); }
+        .field { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 0 14px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.10); border-radius: 12px; transition: border-color .15s, box-shadow .15s; }
+        .field:focus-within { border-color: #9a6bff; box-shadow: 0 0 0 3px rgba(154,107,255,.30); }
+        .field > i { width: 16px; text-align: center; color: rgba(255,255,255,.6); }
+        .field input { flex: 1; min-width: 0; padding: 14px 0; font: inherit; color: #fff; background: transparent; border: 0; outline: 0; }
+        .field input::placeholder { color: rgba(255,255,255,.5); }
+        .field input:-webkit-autofill { -webkit-text-fill-color: #fff; transition: background-color 9999s ease-out 0s; }
+        .eye { margin-right: -6px; padding: 6px 8px; color: rgba(255,255,255,.65); background: none; border: 0; border-radius: 8px; cursor: pointer; }
+        .eye:hover { color: #fff; }
+
+        .meter { display: flex; align-items: center; gap: 4px; margin: -6px 0 16px; }
+        .meter span.bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,.18); transition: background .2s; }
+        .meter .txt { min-width: 52px; margin-left: 8px; font-size: .78rem; color: rgba(255,255,255,.72); text-align: right; }
+
+        .rules { list-style: none; margin: -4px 0 16px; padding: 0; font-size: .8rem; color: rgba(255,255,255,.65); }
+        .rules li { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+        .rules li::before { content: "○"; width: 14px; text-align: center; }
+        .rules li.ok { color: #4ade80; } .rules li.ok::before { content: "✓"; }
+        .rules li.bad { color: #ff9a9e; } .rules li.bad::before { content: "✗"; }
+        .rules li[hidden] { display: none; }
+        .btn { width: 100%; margin-top: 6px; padding: 14px; font: inherit; font-size: 1rem; font-weight: 600; color: #fff; cursor: pointer; border: 0; border-radius: 12px; background: linear-gradient(135deg, #9a6bff, #2f6bff); box-shadow: 0 10px 24px rgba(70,90,255,.35); transition: filter .15s, transform .1s; }
+        .btn:hover { filter: brightness(1.1); }
+        .btn:active { transform: scale(.99); }
+        .foot { margin: 20px 0 0; text-align: center; font-size: .88rem; color: rgba(255,255,255,.72); }
+        .foot a { color: #c9b4ff; font-weight: 500; text-decoration: none; }
+        .foot a:hover { text-decoration: underline; }
+        :focus-visible { outline: 3px solid #9db8ff; outline-offset: 2px; }
+        @media (max-width: 480px) { .auth-card { padding: 28px 22px 24px; } }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+</head>
+<body>
+    <div id="vanta-bg">
+        <div class="glow"></div>
+        <a href="/" class="home-link"><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Home</a>
+    <main class="auth-card" id="card-login">
+        <div class="brand">
+            <img src="/logo.png" alt="Lila logo" class="logo">
+            <h1>Lila</h1>
+            <p>Welcome back! Please log in.</p>
+        </div>
+
+        {% if error_msg %}
+        <div class="alert err" role="alert"><i class="fas fa-exclamation-circle"></i><span>{{ error_msg }}</span></div>
+        {% endif %}
+
+        {% if success_msg %}
+        <div class="alert ok" role="status"><i class="fas fa-check-circle"></i><span>{{ success_msg }}</span></div>
+        {% endif %}
+
+        <form action="/login" method="post">
+            <label for="username">Username</label>
+            <div class="field">
+                <i class="fas fa-user" aria-hidden="true"></i>
+                <input type="text" id="username" name="username" required placeholder="Enter username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false">
+            </div>
+            <label for="password">Password</label>
+            <div class="field">
+                <i class="fas fa-lock" aria-hidden="true"></i>
+                <input type="password" id="password" name="password" required placeholder="Enter password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
+                <button type="button" class="eye" data-for="password" aria-label="Show password"><i class="fas fa-eye"></i></button>
+            </div>
+            <button type="submit" class="btn">Sign In</button>
+        </form>
+
+        <p class="foot">Don’t have an account? <a href="/register">Create one</a></p>
+    </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.net.min.js"></script>
+    <script>
+        // 👁️ แสดง/ซ่อนรหัสผ่าน
+        document.querySelectorAll('.eye').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var input = document.getElementById(btn.dataset.for);
+                var show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+                btn.firstElementChild.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+            });
+        });
+        // 🌐 พื้นหลังเส้นใยแบบเดียวกับหน้าแรก (ถ้าโหลดไม่ได้ ก็ยังมีพื้นสีกรมท่า)
+        try {
+            if (window.VANTA) VANTA.NET({ el: "#vanta-bg", mouseControls: true, touchControls: true, gyroControls: false, minHeight: 200.00, minWidth: 200.00, scale: 1.00, scaleMobile: 1.00, color: 0x3f82ff, backgroundColor: 0x15223c });
+        } catch (e) {}
+    </script>
+</body>
+</html>
