@@ -359,7 +359,7 @@ async def stream_video(filename: str, request: Request):
     return StreamingResponse(iterfile(file_path, start, end), status_code=206, headers=headers)
 
 # --- อัปโหลดไฟล์ ---
-MAX_FILE_SIZE = 500 * 1024 * 1024 # ตั้งลิมิตไว้ที่ 500 MB (ปรับเพิ่มเป็น 1024 สำหรับ 1GB ได้ครับ)
+MAX_FILE_SIZE = 500 * 1024 * 1024
 
 @app.post("/process-file")
 async def process_file(
@@ -369,12 +369,8 @@ async def process_file(
     generate_quiz: bool = Form(False)
 ):
     try:
-        # 🚨 เพิ่มโค้ดบังคับเช็ก Login ตรงนี้!
+        # 🌟 1. เช็กสถานะล็อกอิน (แต่ไม่เตะกลับแล้ว ให้ Guest ผ่านได้)
         username = get_current_user(request)
-        if not username:
-            return templates.TemplateResponse(request=request, name="login.html", context={
-                "request": request, "error_msg": "กรุณาเข้าสู่ระบบก่อนอัปโหลดไฟล์"
-            })
 
         # 1. รับนามสกุลไฟล์
         file_ext = os.path.splitext(file.filename)[1].lower()
@@ -383,7 +379,7 @@ async def process_file(
         filename = f"upload_{uuid.uuid4().hex}{file_ext}"
         file_path = os.path.join(UPLOAD_DIR, filename)
 
-        # 3. 🌟 (ย้ายขึ้นมา) อ่านไฟล์ทีละนิด พร้อมสร้างรหัส Hash (file_unique_id) ให้เสร็จก่อน
+        # 3. อ่านไฟล์และสร้าง Hash
         file_size = 0
         md5_hash = hashlib.md5() 
         with open(file_path, "wb") as buffer:
@@ -396,29 +392,29 @@ async def process_file(
                 if file_size > MAX_FILE_SIZE:
                     buffer.close()
                     os.remove(file_path)
-                    return templates.TemplateResponse(...)
+                    return templates.TemplateResponse(request=request, name="index.html", context={"request": request, "error_msg": "File too large."})
                 buffer.write(chunk)
 
-        # ตัวแปรนี้จะพร้อมใช้งานแล้ว
         file_unique_id = md5_hash.hexdigest() 
-
         audio_extensions = ['.mp3', '.m4a', '.wav', '.ogg', '.aac', '.flac']
         is_audio = file_ext in audio_extensions
 
-        # 🌟 ระบบ CACHING: เช็กฐานข้อมูลก่อนเรียก AI (เพิ่ม username)
-        cached_data = get_cache(username, file_unique_id, difficulty, generate_quiz)
+        # 🌟 2. ระบบ CACHING: ข้ามการค้นหาในฐานข้อมูลไปเลยถ้าเป็น Guest
+        cached_data = None
+        if username:
+            cached_data = get_cache(username, file_unique_id, difficulty, generate_quiz)
         
         if cached_data:
             print(f"⚡ FAST TRACK: ดึงข้อมูลจาก Cache สำหรับไฟล์ {file.filename}")
             ai_data = cached_data
-            # ผูกไฟล์ที่เพิ่งอัปโหลดเข้ากับประวัติเดิม เพื่อให้เปิดดูวิดีโอจาก My Library ได้
             update_cache_file(username, file_unique_id, filename, file.filename)
         else:
             print(f"🧠 ประมวลผลใหม่ด้วย AI สำหรับไฟล์ {file.filename}")
             ai_data = await run_in_threadpool(summarize_video, file_path, 5, difficulty, generate_quiz)
             
-            # บันทึกผลลัพธ์ลง Cache (เพิ่ม username)
-            save_cache(username, file_unique_id, "file", difficulty, generate_quiz, ai_data, filename, file.filename)
+            # 🌟 3. บันทึกผลลัพธ์ลง Cache (เฉพาะคนที่ล็อกอินเท่านั้น)
+            if username:
+                save_cache(username, file_unique_id, "file", difficulty, generate_quiz, ai_data, filename, file.filename)
 
         return templates.TemplateResponse(request=request, name="player.html", context={
             "request": request,
@@ -436,7 +432,7 @@ async def process_file(
             "error_msg": f"An error occurred while processing the file: {str(e)}"
         })
 
-# --- YouTube URL (เวอร์ชันรวมระบบ Caching + แก้ Error หาไฟล์ไม่เจอ) ---
+# --- YouTube URL ---
 @app.post("/process-url")
 def process_url(
     request: Request, 
@@ -445,44 +441,31 @@ def process_url(
     generate_quiz: bool = Form(False)
 ):
     try:
-        # 🚨 เพิ่มโค้ดบังคับเช็ก Login
+        # 🌟 1. ดึงชื่อผู้ใช้ (ให้ Guest เล่นได้)
         username = get_current_user(request)
-        if not username:
-            return templates.TemplateResponse(request=request, name="login.html", context={
-                "request": request, "error_msg": "กรุณาเข้าสู่ระบบก่อนสรุปวิดีโอ YouTube"
-            })
 
-        # 🛡️ เช็กความปลอดภัย: ต้องเป็น URL ของ YouTube เท่านั้น
+        # 🛡️ เช็กความปลอดภัย URL
         if not re.match(r"^(https?\:\/\/)?(www\.youtube\.com|youtu\.be)\/.+$", video_url):
             return templates.TemplateResponse(request=request, name="index.html", context={
-                "request": request, 
-                "error_msg": "❌ Please provide a valid YouTube URL."
+                "request": request, "error_msg": "❌ Please provide a valid YouTube URL."
             })
 
         yt_id_match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", video_url)
         youtube_id = yt_id_match.group(1) if yt_id_match else ""
         
-        # ==========================================
-        # 🌟 สเต็ปที่ 1: เช็ก Cache จากฐานข้อมูลก่อนโหลดคลิป!
-        # ==========================================
-        if youtube_id:
+        # 🌟 2. เช็ก Cache จากฐานข้อมูล (เฉพาะสมาชิก)
+        if username and youtube_id:
             cached_data = get_cache(username, youtube_id, difficulty, generate_quiz)
             if cached_data:
                 print(f"⚡ FAST TRACK: ดึงข้อมูลจาก Cache สำหรับคลิป {youtube_id}")
                 return templates.TemplateResponse(request=request, name="player.html", context={
-                    "request": request, 
-                    "is_youtube": True,
-                    "youtube_id": youtube_id,
-                    "video_filename": "", # ดึงวิดีโอจาก YouTube ฝั่ง Frontend ได้เลย
-                    "data": cached_data,
-                    "filename": "YouTube Video (Cached)"
+                    "request": request, "is_youtube": True, "youtube_id": youtube_id,
+                    "video_filename": "", "data": cached_data, "filename": "YouTube Video (Cached)"
                 })
 
         # ==========================================
-        # 🔽 ถ้าไม่มีใน Cache ให้ทำงานตามปกติ (ดาวน์โหลด -> AI)
+        # 🔽 ถ้าไม่มีใน Cache หรือเป็น Guest
         # ==========================================
-        
-        # 1. เปลี่ยนนามสกุลไฟล์เป็น .mp3
         base_filename = f"web_{uuid.uuid4().hex}"
         final_filename = f"{base_filename}.mp3" 
         final_file_path = os.path.join(UPLOAD_DIR, final_filename)
@@ -491,61 +474,45 @@ def process_url(
         if os.path.exists("/etc/secrets/cookies.txt"):
             cookie_path = "/etc/secrets/cookies.txt"
 
-        # 2. เพิ่มคำสั่ง Postprocessor ให้แปลงเป็น mp3 ชัวร์ๆ
         ydl_opts = {
             'format': 'bestaudio/best', 
-            'postprocessors': [{ 
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '128',
-            }],
+            'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '128'}],
             'outtmpl': os.path.join(UPLOAD_DIR, f"{base_filename}.%(ext)s"),
             'noplaylist': True,
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android', 'web']
-                }
-            }
+            'extractor_args': {'youtube': {'player_client': ['android', 'web']}}
         }
         
         if os.path.exists(cookie_path):
             ydl_opts['cookiefile'] = cookie_path
 
-        # ดาวน์โหลดไฟล์
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([video_url])
 
-        # 3. เช็กให้ชัวร์ว่าไฟล์มันสร้างเสร็จแล้วจริงๆ 
         retry = 0
         while not os.path.exists(final_file_path) and retry < 5:
             time.sleep(1)
             retry += 1
 
         if not os.path.exists(final_file_path):
-            raise FileNotFoundError(f"ไม่พบไฟล์: {final_file_path} (yt-dlp อาจมีปัญหา)")
+            raise FileNotFoundError(f"ไม่พบไฟล์: {final_file_path}")
 
-        # 4. ส่งให้ AI ประมวลผล
+        # ส่งให้ AI ประมวลผล
         ai_data = summarize_video(final_file_path, 5, difficulty, generate_quiz)
 
-        # 🌟 สเต็ปที่ 2: บันทึกผลลัพธ์ลง Cache (เซฟเฉพาะตอนที่ AI ตอบกลับมาสำเร็จ)
-        if youtube_id and ai_data:
+        # 🌟 3. บันทึกผลลัพธ์ลง Cache (เฉพาะคนที่มี Username)
+        if username and youtube_id and ai_data:
             save_cache(username, youtube_id, "youtube", difficulty, generate_quiz, ai_data)
             print(f"💾 SAVED TO CACHE: บันทึกข้อมูลคลิป {youtube_id} เรียบร้อยแล้ว")
 
         return templates.TemplateResponse(request=request, name="player.html", context={
-            "request": request, 
-            "is_youtube": True,
-            "youtube_id": youtube_id,
-            "video_filename": final_filename, 
-            "data": ai_data,
-            "filename": "YouTube Video"
+            "request": request, "is_youtube": True, "youtube_id": youtube_id,
+            "video_filename": final_filename, "data": ai_data, "filename": "YouTube Video"
         })
 
     except Exception as e:
         print(f"❌ Error in process-url: {e}")
         return templates.TemplateResponse(request=request, name="index.html", context={
-            "request": request, 
-            "error_msg": f"ไม่สามารถดึงข้อมูล YouTube ได้: {str(e)}"
+            "request": request, "error_msg": f"ไม่สามารถดึงข้อมูล YouTube ได้: {str(e)}"
         })
 
 # ==========================================
