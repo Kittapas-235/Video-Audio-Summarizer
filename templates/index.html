@@ -333,28 +333,53 @@
             color: var(--va-muted);
         }
 
-        /* ---------- Loading Overlay ---------- */
+        /* ---------- Loading Overlay (สไตล์กระจก เข้ากับหน้าแรก) ---------- */
         #loadingOverlay {
             display: none;
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.9);
+            inset: 0;
             z-index: 9999;
-            text-align: center;
-            padding-top: 25vh;
+            background:
+                radial-gradient(800px 500px at 50% 0%, rgba(154, 107, 255, 0.30), transparent 70%),
+                rgba(8, 15, 38, 0.80);
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
         }
-
-        #loadingOverlay h2 {
-            font-size: 4rem;
-            font-weight: 700;
-            letter-spacing: 2px;
+        .ld-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+        .ld-card {
+            width: 100%; max-width: 440px; padding: 34px 30px 26px; text-align: center; color: #fff;
+            background: linear-gradient(145deg, rgba(255,255,255,.18), rgba(255,255,255,.06));
+            border: 1px solid rgba(255,255,255,.26); border-radius: 22px;
+            box-shadow: 0 30px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.3);
         }
-
-        #loadingOverlay p {
-            font-size: 1.8rem;
-            opacity: 0.8;
+        .ld-orb { position: relative; width: 104px; height: 104px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; }
+        .ld-orb::before {
+            content: ""; position: absolute; inset: 0; border-radius: 50%;
+            background: conic-gradient(from 0deg, #9a6bff, #2f6bff, rgba(47,107,255,0) 70%, #9a6bff);
+            -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+            animation: ld-spin 1.4s linear infinite;
         }
+        .ld-orb img { width: 62px; height: 62px; object-fit: contain; animation: ld-pulse 2s ease-in-out infinite; }
+        .ld-title { margin: 0; font-size: 1.5rem; font-weight: 600; }
+        .ld-sub { margin: 8px 0 0; color: rgba(255,255,255,.72); font-size: .95rem; line-height: 1.5; }
+        .ld-bar { position: relative; height: 6px; margin: 22px 0 18px; border-radius: 999px; background: rgba(255,255,255,.14); overflow: hidden; }
+        .ld-bar::after { content: ""; position: absolute; top: 0; bottom: 0; width: 38%; border-radius: 999px; background: linear-gradient(90deg, #9a6bff, #2f6bff); animation: ld-slide 1.5s ease-in-out infinite; }
+        .ld-meta { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        .ld-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 5px 12px; font-size: .8rem; color: rgba(255,255,255,.85); background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.18); border-radius: 999px; }
+        .ld-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px; }
+        .ld-cancel { margin-top: 22px; padding: 9px 26px; font: inherit; font-size: .92rem; color: #fff; background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.28); border-radius: 999px; cursor: pointer; transition: background .15s, border-color .15s; }
+        .ld-cancel:hover { background: rgba(229,72,77,.25); border-color: #ff7a7f; }
+        .ld-cancel:focus-visible { outline: 3px solid #9db8ff; outline-offset: 2px; }
+        .ld-note { margin: 14px 0 0; font-size: .78rem; color: rgba(255,255,255,.55); }
+        @keyframes ld-spin { to { transform: rotate(360deg); } }
+        @keyframes ld-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+        @keyframes ld-slide { 0% { left: -40%; } 100% { left: 100%; } }
+        @media (prefers-reduced-motion: reduce) {
+            .ld-orb::before, .ld-orb img { animation: none; }
+            .ld-bar::after { animation: none; left: 0; width: 100%; opacity: .6; }
+        }
+        @media (max-width: 480px) { .ld-card { padding: 28px 20px 22px; } }
 
         .spinner-border {
             width: 5rem !important;
@@ -411,8 +436,6 @@
             .va-head, .va-body { padding-left: 20px; padding-right: 20px; }
             .va-tabs { padding: 0 20px; }
             .va-head h1 { font-size: 1.5rem; }
-            #loadingOverlay h2 { font-size: 2.2rem; }
-            #loadingOverlay p { font-size: 1.1rem; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -421,11 +444,22 @@
     </style>
 </head>
 <body>
-    <div id="loadingOverlay" class="text-center">
-        <img src="/cortisol.gif" alt="AI is analyzing..." class="img-fluid mb-4" style="max-height: 180px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0, 212, 255, 0.2);">
-        <br>
-        <h2 class="text-white mt-4" id="loading-text">Analyzing... Please wait</h2>
-        <p class="text-white-50 mt-3">Please do not close this window</p>
+    <div id="loadingOverlay" role="dialog" aria-modal="true" aria-labelledby="loading-text">
+        <div class="ld-center">
+            <div class="ld-card">
+                <div class="ld-orb"><img src="/logo.png" alt=""></div>
+                <h2 class="ld-title" id="loading-text">Analyzing…</h2>
+                <p class="ld-sub" id="ldSub" aria-live="polite">Reading your content and writing the summary. Long videos can take a few minutes.</p>
+                <div class="ld-bar" role="progressbar" aria-label="Analyzing" aria-busy="true"></div>
+                <div class="ld-meta">
+                    <span class="ld-chip"><i id="ldSrcIcon" class="fas fa-file-lines" aria-hidden="true"></i><span id="ldSrc">Your content</span></span>
+                    <span class="ld-chip"><i class="fas fa-gauge-high" aria-hidden="true"></i><span id="ldOpts">Medium</span></span>
+                    <span class="ld-chip"><i class="far fa-clock" aria-hidden="true"></i><span id="ldTime">0:00</span></span>
+                </div>
+                <button type="button" class="ld-cancel" onclick="cancelLoading()"><i class="fas fa-times me-2" aria-hidden="true"></i>Cancel</button>
+                <p class="ld-note">Please keep this tab open</p>
+            </div>
+        </div>
     </div>
 
     <!-- 🌟 เมนูด้านบน (Navbar) -->
@@ -603,7 +637,7 @@
             <div class="col-md-4">
                 <i class="fas fa-bolt fa-3x text-primary mb-3"></i>
                 <h3>Fast Processing</h3>
-                <p class="text-muted">วิเคราะห์เนื้อหาวิดีโออย่างรวดเร็วด้วย Gemini 1.5 Flash</p>
+                <p class="text-muted">วิเคราะห์เนื้อหาวิดีโออย่างรวดเร็วด้วย Gemini</p>
             </div>
             <div class="col-md-4">
                 <i class="fas fa-brain fa-3x text-primary mb-3"></i>
@@ -661,6 +695,18 @@
             }
         });
 
+        // 🌟 ฟังก์ชันยกเลิกการสรุปเนื้อหา
+        function cancelLoading() {
+            // สั่งให้เบราว์เซอร์หยุดการโหลดและหยุดรอ Request ทันที
+            window.stop();
+            
+            // ซ่อนหน้า Loading ดำๆ
+            document.getElementById('loadingOverlay').style.display = 'none';
+            
+            // เตะกลับหน้าแรกเพื่อเคลียร์สถานะฟอร์มทั้งหมดให้สะอาด
+            window.location.href = "/";
+        }
+
         // 1. ดักจับตอนที่กดปุ่ม Upload (ส่ง Form)
         document.querySelectorAll('form').forEach(form => {
             form.addEventListener('submit', function() {
@@ -671,6 +717,38 @@
                 history.pushState({ isUploading: true }, "", window.location.href);
             });
         });
+
+        // ⏱️ หน้า Loading: แสดงแหล่งที่มา ตัวเลือก และเวลาที่ผ่านไป (เพิ่มเติมจากของเดิม ไม่แก้การทำงานเดิม)
+        (function () {
+            let timer = null;
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function () {
+                    const fileInput = form.querySelector('input[type="file"]');
+                    const urlInput = form.querySelector('input[name="video_url"]');
+                    const isUrl = !!urlInput;
+                    const src = isUrl ? urlInput.value.trim() : ((fileInput && fileInput.files[0]) ? fileInput.files[0].name : '');
+                    document.getElementById('ldSrc').textContent = src || 'Your content';
+                    document.getElementById('ldSrcIcon').className = isUrl ? 'fab fa-youtube' : 'fas fa-file-lines';
+                    const diffEl = form.querySelector('input[name="difficulty"]:checked');
+                    const quizEl = form.querySelector('input[name="generate_quiz"]');
+                    const diff = diffEl ? diffEl.value.charAt(0).toUpperCase() + diffEl.value.slice(1) : 'Medium';
+                    document.getElementById('ldOpts').textContent = diff + (quizEl && quizEl.checked ? ' · Quiz on' : '');
+
+                    const timeEl = document.getElementById('ldTime');
+                    const sub = document.getElementById('ldSub');
+                    sub.textContent = 'Reading your content and writing the summary. Long videos can take a few minutes.';
+                    timeEl.textContent = '0:00';
+                    const start = Date.now();
+                    clearInterval(timer);
+                    timer = setInterval(() => {
+                        if (document.getElementById('loadingOverlay').style.display !== 'block') { clearInterval(timer); return; }
+                        const s = Math.floor((Date.now() - start) / 1000);
+                        timeEl.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+                        if (s === 60) sub.textContent = 'Still working. Longer videos can take a few minutes.';
+                    }, 1000);
+                });
+            });
+        })();
 
         // 2. ดักจับเหตุการณ์ตอนผู้ใช้กดปุ่ม "ย้อนกลับ (Back)" บนเบราว์เซอร์
         window.addEventListener('popstate', function(event) {

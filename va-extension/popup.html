@@ -2,16 +2,74 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <title>Lila</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Quando&display=swap" rel="stylesheet">
     <style>
-        body { width: 250px; padding: 15px; font-family: sans-serif; text-align: center; }
-        button { background: #00d2ff; color: #000; border: none; padding: 10px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        button:hover { background: #00b8e6; }
+        * { box-sizing: border-box; }
+        body {
+            width: 320px; margin: 0; padding: 18px; color: #fff;
+            font-family: "Google Sans", "Kanit", system-ui, sans-serif;
+            background:
+                radial-gradient(300px 200px at 0% 0%, rgba(154, 107, 255, 0.35), transparent 70%),
+                radial-gradient(260px 200px at 100% 100%, rgba(47, 107, 255, 0.30), transparent 70%),
+                #15223c;
+        }
+        .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .brand img { width: 36px; height: 36px; }
+        .brand b { font-family: "Quando", serif; font-weight: 400; font-size: 1.5rem; line-height: 1; }
+        .brand span { display: block; margin-top: 3px; font-size: 0.75rem; color: rgba(255, 255, 255, 0.65); }
+
+        .card {
+            padding: 12px; margin-bottom: 14px; border-radius: 14px;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+            border: 1px solid rgba(255, 255, 255, 0.22);
+        }
+        .thumb { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; margin-bottom: 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.08); }
+        .title {
+            margin: 0; font-size: 0.88rem; line-height: 1.4; font-weight: 500;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .empty { margin: 0; padding: 14px 6px; text-align: center; font-size: 0.88rem; line-height: 1.5; color: rgba(255, 255, 255, 0.75); }
+        [hidden] { display: none !important; }
+
+        button#analyzeBtn {
+            width: 100%; padding: 12px; font: inherit; font-size: 0.95rem; font-weight: 600; color: #fff; cursor: pointer;
+            border: 0; border-radius: 12px;
+            background: linear-gradient(135deg, #9a6bff, #2f6bff);
+            box-shadow: 0 8px 20px rgba(70, 90, 255, 0.35);
+            transition: filter 0.15s, transform 0.1s;
+        }
+        button#analyzeBtn:hover:not(:disabled) { filter: brightness(1.1); }
+        button#analyzeBtn:active:not(:disabled) { transform: scale(0.99); }
+        button#analyzeBtn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+        button:focus-visible, a:focus-visible { outline: 3px solid #9db8ff; outline-offset: 2px; }
+
+        .hint { margin: 10px 0 0; text-align: center; font-size: 0.75rem; line-height: 1.5; color: rgba(255, 255, 255, 0.6); }
+        .foot { margin: 12px 0 0; text-align: center; font-size: 0.78rem; }
+        .foot a { color: #c9b4ff; text-decoration: none; }
+        .foot a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
-    <h3 style="margin-top: 0;">VA-Summar</h3>
-    <p style="font-size: 12px; color: #666;">สรุปเนื้อหาจากวิดีโอนี้ทันที</p>
-    <button id="analyzeBtn">Analyze Video</button>
+    <div class="brand">
+        <img src="icons/icon48.png" alt="">
+        <div><b>Lila</b><span>สรุปเนื้อหาจากวิดีโอนี้ทันที</span></div>
+    </div>
+
+    <div class="card">
+        <div id="videoBox" hidden>
+            <img id="thumb" class="thumb" alt="">
+            <p id="videoTitle" class="title"></p>
+        </div>
+        <p id="emptyMsg" class="empty">เปิดหน้าวิดีโอ YouTube ก่อน<br>แล้วกดปุ่มด้านล่างเพื่อสรุป</p>
+    </div>
+
+    <button id="analyzeBtn" type="button" disabled>Summarize this video</button>
+    <p class="hint">จะเปิด Lila ในแท็บใหม่ พร้อมสรุปและแบบทดสอบ (Medium)<br>หากยังไม่ได้ล็อกอิน ให้ล็อกอินก่อน</p>
+    <p class="foot"><a id="openApp" href="#" target="_blank" rel="noopener">เปิดเว็บ Lila</a></p>
+
     <script src="popup.js"></script>
 </body>
 </html>
