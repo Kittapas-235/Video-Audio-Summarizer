@@ -423,7 +423,8 @@ async def process_file(
             "youtube_id": "",
             "video_filename": filename, 
             "data": ai_data,
-            "filename": file.filename
+            "filename": file.filename,
+            "item_id": file_unique_id
         })
     except Exception as e:
         print(f"❌ Error in process-file: {e}")
@@ -479,7 +480,14 @@ def process_url(
             'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '128'}],
             'outtmpl': os.path.join(UPLOAD_DIR, f"{base_filename}.%(ext)s"),
             'noplaylist': True,
-            'extractor_args': {'youtube': {'player_client': ['android', 'web']}}
+            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
+
+            'socket_timeout': 30,
+            'retries': 10,
+            'fragment_retries': 10,
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            }
         }
         
         if os.path.exists(cookie_path):
@@ -506,7 +514,8 @@ def process_url(
 
         return templates.TemplateResponse(request=request, name="player.html", context={
             "request": request, "is_youtube": True, "youtube_id": youtube_id,
-            "video_filename": final_filename, "data": ai_data, "filename": "YouTube Video"
+            "video_filename": final_filename, "data": ai_data, "filename": "YouTube Video",
+            "item_id": youtube_id
         })
 
     except Exception as e:
@@ -533,14 +542,39 @@ def chat_with_ai(request: ChatRequest):
 # ==========================================
 # ➕ ระบบ Generate More Quiz
 # ==========================================
+# 🌟 1. เพิ่มตัวแปร item_id เข้ามาในคลาส
 class GenQuizRequest(BaseModel):
     context: str  
     num_questions: int
     difficulty: str
+    item_id: str = "" 
 
+# 🌟 2. อัปเดตฟังก์ชันรับข้อสอบให้บันทึกลง SQLite
 @app.post("/generate-more-quiz")
-def generate_more_quiz(request: GenQuizRequest):
-    new_quizzes = generate_quizzes_only(request.context, request.num_questions, request.difficulty)
+def generate_more_quiz(request: Request, payload: GenQuizRequest):
+    username = get_current_user(request) # เช็กว่ามีใครล็อกอินอยู่ไหม
+    new_quizzes = generate_quizzes_only(payload.context, payload.num_questions, payload.difficulty)
+    
+    # ถ้ามีผู้ใช้งานล็อกอิน มี ID คลิป และ AI สร้างข้อสอบสำเร็จ ให้บันทึกลงฐานข้อมูล
+    if username and payload.item_id and new_quizzes:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT source_type, difficulty, has_quiz, ai_data, video_filename, original_filename FROM video_cache WHERE id=? AND username=?", (payload.item_id, username))
+        row = cursor.fetchone()
+        
+        if row:
+            source_type, difficulty, has_quiz, ai_data_str, video_filename, original_filename = row
+            ai_data = json.loads(ai_data_str)
+            
+            # เอาข้อสอบชุดใหม่ไปต่อท้ายรายการข้อสอบเดิม
+            if "quizzes" not in ai_data:
+                ai_data["quizzes"] = []
+            ai_data["quizzes"].extend(new_quizzes)
+            
+            # บันทึกทับลงฐานข้อมูลด้วยฟังก์ชัน save_cache ที่เรามีอยู่แล้ว
+            save_cache(username, payload.item_id, source_type, difficulty, has_quiz, ai_data, video_filename, original_filename)
+        conn.close()
+
     return {"quizzes": new_quizzes or []}
 
 # ==========================================
@@ -548,13 +582,12 @@ def generate_more_quiz(request: GenQuizRequest):
 # ==========================================
 @app.get("/process-extension", response_class=HTMLResponse)
 async def process_extension(request: Request, url: str):
-    # สร้างหน้าเว็บจำลองขึ้นมา เพื่อแปลงลิงก์ที่รับมา (GET) ให้เป็นฟอร์ม (POST) ส่งให้ระบบหลัก
     html_content = f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Loading VA-Summar...</title>
+        <title>Loading Lila...</title>
         <style>
             body {{
                 background-color: #1a1a1a;
@@ -581,14 +614,16 @@ async def process_extension(request: Request, url: str):
     </head>
     <body>
         <div class="loader"></div>
-        <h3>Connecting to VA-Summar...</h3>
+        <h3>Connecting to Lila...</h3>
         <p style="color: #888;">Please wait, auto-forwarding video URL</p>
         
         <!-- ฟอร์มล่องหนสำหรับยิงข้อมูลเข้าหลังบ้าน -->
         <form id="autoSubmitForm" action="/process-url" method="post" style="display: none;">
             <input type="hidden" name="video_url" value="{url}">
             <input type="hidden" name="difficulty" value="medium">
-            <input type="hidden" name="generate_quiz" value="true">
+            
+            <!-- 🌟 แก้ตรงนี้จาก true เป็น false เพื่อปิดการสร้างข้อสอบอัตนัย -->
+            <input type="hidden" name="generate_quiz" value="false"> 
         </form>
         
         <script>
@@ -647,7 +682,8 @@ async def view_history(request: Request, item_id: str): # 🌟 แก้เป�
         "youtube_id": yt_id,
         "video_filename": vid_file,
         "is_audio": os.path.splitext(vid_file)[1].lower() in ['.mp3', '.m4a', '.wav', '.ogg', '.aac', '.flac'],
-        "filename": original_filename or ""
+        "filename": original_filename or "",
+        "item_id": item_id
     })
 
 # ==========================================

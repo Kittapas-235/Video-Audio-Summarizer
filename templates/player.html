@@ -265,6 +265,24 @@
             #genMoreQuizModal .btn-info { border:0; border-radius:12px; color:#fff; background:linear-gradient(135deg,var(--lila-a1),var(--lila-a2)); }
         }
         @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+        /* 🔔 Pop-up แจ้งเตือน (แทน alert) */
+        #lila-toast-stack { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 3000; display: flex; flex-direction: column; gap: 10px; align-items: center; pointer-events: none; width: min(92vw, 420px); }
+        .lila-toast { pointer-events: auto; width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 16px; color: #eef0ff; background: rgba(21,34,60,.96); border: 1px solid rgba(255,255,255,.14); box-shadow: 0 12px 32px rgba(0,0,0,.45); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); animation: lila-toast-in .3s ease; font-size: .92rem; line-height: 1.4; }
+        .lila-toast.hide { opacity: 0; transform: translateY(-12px); transition: all .3s ease; }
+        .lila-toast .lila-toast-icon { font-size: 1.25rem; flex: 0 0 auto; }
+        .lila-toast .lila-toast-body { flex: 1 1 auto; }
+        .lila-toast .lila-toast-title { font-weight: 600; }
+        .lila-toast .lila-toast-sub { color: #a9b0d6; font-size: .82rem; }
+        .lila-toast.success { border-left: 4px solid #4ade80; }
+        .lila-toast.error { border-left: 4px solid #ff7a7f; }
+        .lila-toast.warn { border-left: 4px solid #ffd84d; }
+        .lila-toast.loading { border-left: 4px solid #9a6bff; }
+        .lila-toast .lila-toast-action { border: 0; border-radius: 999px; padding: 6px 14px; font-size: .82rem; font-weight: 600; color: #fff; background: linear-gradient(135deg,#9a6bff,#2f6bff); cursor: pointer; white-space: nowrap; }
+        .lila-toast .lila-toast-close { border: 0; background: transparent; color: #a9b0d6; font-size: 1.1rem; cursor: pointer; padding: 0 2px; }
+        @keyframes lila-toast-in { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: translateY(0); } }
+        #gen-quiz-badge { display: none; }
+        #gen-quiz-badge.active { display: inline-block; }
     </style>
 </head>
 <body>
@@ -395,6 +413,7 @@
                             <h5 class="text-warning m-0"><i class="fas fa-question-circle me-2"></i>Practice Quiz</h5>
                             <button class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#genMoreQuizModal">
                                 <i class="fas fa-magic"></i> Gen More Quiz
+                                <span id="gen-quiz-badge" class="spinner-border spinner-border-sm ms-1" role="status"></span>
                             </button>
                         </div>
                         <div id="quiz-list-container">
@@ -453,18 +472,18 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="small text-info">Number of Questions</label>
-                        <select id="more-q-num" class="form-select bg-black text-white border-secondary">
-                            <option value="5">5 Questions</option>
-                            <option value="10">10 Questions</option>
-                            <option value="20">20 Questions</option>
+                        <select id="more-q-num" class="form-select text-white border-secondary">
+                            <option value="5" class="bg-dark text-white">5 Questions</option>
+                            <option value="10" class="bg-dark text-white">10 Questions</option>
+                            <option value="20" class="bg-dark text-white">20 Questions</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="small text-info">Difficulty Level</label>
-                        <select id="more-q-diff" class="form-select bg-black text-white border-secondary">
-                            <option value="easy">Easy</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="hard">Hard</option>
+                        <select id="more-q-diff" class="form-select text-white border-secondary">
+                            <option value="easy" class="bg-dark text-white">Easy</option>
+                            <option value="medium" selected class="bg-dark text-white">Medium</option>
+                            <option value="hard" class="bg-dark text-white">Hard</option>
                         </select>
                     </div>
                     <div id="gen-loading" class="text-center d-none">
@@ -478,6 +497,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Pop-up แจ้งเตือนกลางจอด้านบน -->
+    <div id="lila-toast-stack" aria-live="polite"></div>
 
     <!-- Toast for Copy Confirmation -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3"><div id="copyToast" class="toast align-items-center text-bg-secondary border-0" role="alert"><div class="d-flex"><div class="toast-body">Copied!</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div></div>
@@ -696,37 +718,115 @@
         // ==========================================
         // ➕ ฟังก์ชัน Generate More Quiz
         // ==========================================
+        // 🔔 ระบบ Pop-up แจ้งเตือน (แทน alert ที่บล็อกหน้าจอ)
+        function showToast({ type = 'success', title = '', sub = '', icon = null, actionLabel = null, onAction = null, duration = 6000 } = {}) {
+            const stack = document.getElementById('lila-toast-stack');
+            const icons = { success: 'fa-circle-check', error: 'fa-circle-exclamation', warn: 'fa-triangle-exclamation', loading: null };
+            const el = document.createElement('div');
+            el.className = `lila-toast ${type}`;
+            el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+
+            const iconHtml = type === 'loading'
+                ? '<div class="spinner-border spinner-border-sm text-info lila-toast-icon" role="status"></div>'
+                : `<i class="fas ${icon || icons[type] || 'fa-circle-info'} lila-toast-icon" style="color:${type === 'success' ? '#4ade80' : type === 'error' ? '#ff7a7f' : '#ffd84d'}"></i>`;
+
+            el.innerHTML = `${iconHtml}
+                <div class="lila-toast-body">
+                    <div class="lila-toast-title"></div>
+                    ${sub ? '<div class="lila-toast-sub"></div>' : ''}
+                </div>`;
+            el.querySelector('.lila-toast-title').textContent = title;
+            if (sub) el.querySelector('.lila-toast-sub').textContent = sub;
+
+            const remove = () => {
+                if (!el.parentNode) return;
+                el.classList.add('hide');
+                setTimeout(() => el.remove(), 300);
+            };
+
+            if (actionLabel) {
+                const act = document.createElement('button');
+                act.className = 'lila-toast-action';
+                act.textContent = actionLabel;
+                act.onclick = () => { if (onAction) onAction(); remove(); };
+                el.appendChild(act);
+            }
+            if (type !== 'loading') {
+                const close = document.createElement('button');
+                close.className = 'lila-toast-close';
+                close.setAttribute('aria-label', 'Close');
+                close.innerHTML = '&times;';
+                close.onclick = remove;
+                el.appendChild(close);
+                if (duration > 0) setTimeout(remove, duration);
+            }
+
+            stack.appendChild(el);
+            el.dismiss = remove;
+            return el;
+        }
+
+        // จำนวนงาน Gen Quiz ที่กำลังทำอยู่เบื้องหลัง
+        let pendingQuizJobs = 0;
+        function updateGenBadge() {
+            document.getElementById('gen-quiz-badge').classList.toggle('active', pendingQuizJobs > 0);
+        }
+
+        function goToQuizTab(firstQuizId) {
+            const tabBtn = document.querySelector('[data-bs-target="#quiz-tab"]');
+            if (tabBtn) bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+            if (firstQuizId) {
+                setTimeout(() => {
+                    const card = document.getElementById(`quiz-card-${firstQuizId}`);
+                    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 350);
+            }
+        }
+
         async function generateMoreQuizzes() {
             const num = document.getElementById('more-q-num').value;
             const diff = document.getElementById('more-q-diff').value;
-            const btn = document.getElementById('btn-start-gen');
-            const loading = document.getElementById('gen-loading');
-            
+
+            // ดึงบริบทจากหน้าเว็บ
             const contextText = document.getElementById('markdown-content').innerText;
             if (!contextText || contextText.trim() === "") {
-                alert("Study Guide is empty. Cannot generate quizzes.");
+                showToast({ type: 'warn', title: 'Study Guide ว่างเปล่า', sub: 'ไม่สามารถสร้างแบบทดสอบได้' });
                 return;
             }
 
-            btn.disabled = true;
-            loading.classList.remove('d-none');
+            // ปิด Modal ทันที ผู้ใช้กลับไปใช้งานส่วนอื่นได้เลย (ไม่ล็อกปุ่ม สั่งซ้ำได้)
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('genMoreQuizModal'));
+            if (modalInstance) modalInstance.hide();
+
+            // ไม่มี pop-up ตอนเริ่ม แสดงแค่ spinner เล็กๆ บนปุ่ม Gen More Quiz ระหว่างรอ
+            pendingQuizJobs++;
+            updateGenBadge();
+            let firstNewQuizId = null;
+
+            const currentItemId = "{{ item_id | default('') }}";
 
             try {
+                // Fetch แบบเบื้องหลัง[cite: 102]
                 const response = await fetch('/generate-more-quiz', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         context: contextText,
                         num_questions: parseInt(num),
-                        difficulty: diff
+                        difficulty: diff,
+                        item_id: currentItemId
                     })
                 });
 
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const result = await response.json();
                 
+                // ถ้านำข้อสอบมาวาดลงบนหน้า
                 if (result.quizzes && result.quizzes.length > 0) {
+                    const batchStamp = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
                     result.quizzes.forEach((quiz, index) => {
-                        const quizId = "ai-extra-" + Date.now() + index;
+                        const quizId = "ai-extra-" + batchStamp + "-" + index;
+                        if (index === 0) firstNewQuizId = quizId;
                         
                         const quizType = (quiz.type || 'multiple_choice').toLowerCase().trim();
                         let inputHtml = '';
@@ -790,15 +890,26 @@
                         MathJax.typesetClear([quizContainer]);
                         MathJax.typesetPromise([quizContainer]).catch((err) => console.log(err));
                     }
+                    
+                    // Pop-up แจ้งเตือนเมื่อข้อสอบใหม่มาถึง
+                    showToast({
+                        type: 'success',
+                        title: `สร้างแบบทดสอบใหม่ ${result.quizzes.length} ข้อเสร็จแล้ว!`,
+                        sub: 'กดปุ่มเพื่อไปดูข้อสอบ',
+                        actionLabel: 'ดูข้อสอบ',
+                        onAction: () => goToQuizTab(firstNewQuizId),
+                        duration: 10000
+                    });
+                } else {
+                    showToast({ type: 'warn', title: 'ไม่ได้รับข้อสอบใหม่', sub: 'กรุณาลองอีกครั้ง' });
                 }
 
-                bootstrap.Modal.getInstance(document.getElementById('genMoreQuizModal')).hide();
             } catch (error) {
                 console.error(error);
-                alert("Failed to generate more quizzes. Please try again.");
+                showToast({ type: 'error', title: 'สร้างแบบทดสอบไม่สำเร็จ', sub: 'กรุณาลองอีกครั้ง', duration: 8000 });
             } finally {
-                btn.disabled = false;
-                loading.classList.add('d-none');
+                pendingQuizJobs = Math.max(0, pendingQuizJobs - 1);
+                updateGenBadge();
             }
         }
 
